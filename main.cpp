@@ -45,10 +45,11 @@ void printResults(Dist_List_T dist, Prev_List_T parent) {
     }
 }
 
-void export_to_dot() {
-    ofstream file("graph.dot");
+void export_to_dot_(string filename, bool cd_graph=false) {
+    Graph g = cd_graph ? constant_degree_graph : graph;
+    ofstream file(filename);
     file << "digraph G {\n";
-    for (const auto& line : graph) {
+    for (const auto& line : g) {
         for (const auto& p : line.second) {
             file << "  " << line.first << " -> " << p.first << " [label=\"" << p.second << "\"];\n";
         }
@@ -57,10 +58,19 @@ void export_to_dot() {
     file.close();
 }
 
+void export_to_dot() {
+    export_to_dot_("graph.dot");
+    export_to_dot_("cd_graph.dot", true);
+}
+
 void graph_image() {
     int result = system("dot -Tpng graph.dot -o graph.png");
     if (result != 0) {
         cout << "Error while generating graph image." << endl;
+    }
+    result = system("dot -Tpng cd_graph.dot -o cd_graph.png");
+    if (result != 0) {
+        cout << "Error while generating cd_graph image." << endl;
     }
 }
 
@@ -71,11 +81,10 @@ pair<double, int> test(function<pair<Dist_List_T, Prev_List_T> (Graph&, string, 
 
     auto t0 = chrono::high_resolution_clock::now();
     pair<Dist_List_T, Prev_List_T> results = algo(g, src, n_l);
-    chrono::duration<double, milli> time_span = chrono::high_resolution_clock::now() - t0;
-
     if (use_cd) {
         results = fix_results_after_cd(results, constant_degree_map, nodes_list);
     }
+    chrono::duration<double, milli> time_span = chrono::high_resolution_clock::now() - t0;
 
     //printResults(results.first, results.second);
     double time_span_ms = time_span.count();

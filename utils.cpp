@@ -1,5 +1,6 @@
 #include "utils.hpp"
 
+//TODO cache this
 vector<string> neighbours(Graph& graph, string cur) {
     vector<string> sortie;
     for (auto p: graph[cur]) {
@@ -8,6 +9,8 @@ vector<string> neighbours(Graph& graph, string cur) {
     return sortie;
 }
 
+
+//TODO cache this
 int subtree_size_helper(string node, unordered_map<string, unordered_set<string>> &forest, unordered_set<string> &visited) {
     if (visited.count(node)) {
         return 0;
@@ -96,7 +99,7 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
         vector<string> cycle_nodes;
 
         // out-nodes
-        if (out_size >= 2) {
+        if (out_size > 2) {
             nodes_list.erase(find(nodes_list.begin(), nodes_list.end(), s));
             auto it = G_prime.find(s);
             G_prime.erase(it);
@@ -112,14 +115,14 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
                 cd_map[new_node] = s;
             }
         } else {
-            if (out_size == 1) {
+            if (out_size >= 1) {
                 cycle_nodes.push_back(s);
                 add_s_again = true;
             }
         }
 
         //in-nodes
-        if (in_size >= 2) {
+        if (in_size > 2) {
             auto it_l = find(nodes_list.begin(), nodes_list.end(), s);
             if (it_l != nodes_list.end()) {
                 nodes_list.erase(it_l);
@@ -143,7 +146,7 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
                 cd_map[new_node] = s;
             }
         } else {
-            if (in_size == 1) {
+            if (in_size >= 1) {
                 cycle_nodes.push_back(s);
                 add_s_again = true;
             }
