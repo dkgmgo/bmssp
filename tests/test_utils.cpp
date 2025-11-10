@@ -118,3 +118,28 @@ TEST_F(Test_Utils, test_constant_degree_transformation_already_cd) {
     EXPECT_TRUE(G_prime.count("C") && G_prime.count("D") && G_prime.count("E") && G_prime.count("A") && G_prime.count("B"));
     EXPECT_EQ(G_prime, G);
 }
+
+TEST_F(Test_Utils, test_constant_degree_transformation_2ins_3_outs) {
+    Graph G = {
+        {"A", {{"B", 10}, {"C", 10}, {"D", 10}}},
+        {"C", {{"A", 10}}},
+        {"D", {{"A", 10}}}
+    };
+    auto res = constant_degree_transformation(G, 4);
+    Graph G_prime = get<0>(res);
+    vector<string> node_list = get<1>(res);
+
+    EXPECT_GE(node_list.size(), 4);
+    EXPECT_EQ(node_list.size(), 8);
+    for (auto el: G_prime) {
+        EXPECT_NE(el.first, "A");
+        EXPECT_FALSE(el.second.count("A"));
+    }
+    EXPECT_TRUE(G_prime.count("C") && G_prime.count("D"));
+    EXPECT_TRUE(count(node_list.begin(), node_list.end(), "B"));
+    EXPECT_EQ(G_prime["x_A_B"]["B"], 10);
+    EXPECT_EQ(G_prime["x_A_C"]["C"], 10);
+    EXPECT_EQ(G_prime["C"]["y_C_A"], 10);
+    EXPECT_EQ(G_prime["D"]["y_D_A"], 10);
+    EXPECT_EQ(G_prime["y_D_A"]["x_A_D"], FAKE_ZERO);
+}

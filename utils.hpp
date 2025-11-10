@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #define INF 10000000
-#define FAKE_ZERO 1e-10
+#define FAKE_ZERO 1e-6
 #define ROUNDING_PRECISION 0.001
 
 using namespace std;

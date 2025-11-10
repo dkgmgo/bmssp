@@ -44,6 +44,7 @@ Graph random_graph(int N, int max_weight, int edges, int seed) {
     mt19937 rng(seed);
     uniform_int_distribution<> distr1(1, max_weight);
     uniform_int_distribution<> distr2(0, N-1);
+    edges = min(edges, N*(N-1));
 
     while (edges > 0) {
         int u = distr2(rng);
@@ -99,7 +100,11 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
         vector<string> cycle_nodes;
 
         // out-nodes
-        if (out_size > 2) {
+        if (in_size <= 2 && out_size <= 2) {
+            continue;
+        }
+
+        if (out_size >= 2) {
             nodes_list.erase(find(nodes_list.begin(), nodes_list.end(), s));
             auto it = G_prime.find(s);
             G_prime.erase(it);
@@ -114,15 +119,13 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
                 sending_nodes.push_back(new_node);
                 cd_map[new_node] = s;
             }
-        } else {
-            if (out_size >= 1) {
-                cycle_nodes.push_back(s);
-                add_s_again = true;
-            }
+        } else if (out_size == 1) {
+            cycle_nodes.push_back(s);
+            add_s_again = true;
         }
 
         //in-nodes
-        if (in_size > 2) {
+        if (in_size >= 2) {
             auto it_l = find(nodes_list.begin(), nodes_list.end(), s);
             if (it_l != nodes_list.end()) {
                 nodes_list.erase(it_l);
@@ -145,11 +148,9 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
                 receiving_nodes.push_back(new_node);
                 cd_map[new_node] = s;
             }
-        } else {
-            if (in_size >= 1) {
-                cycle_nodes.push_back(s);
-                add_s_again = true;
-            }
+        } else if (in_size == 1) {
+            cycle_nodes.push_back(s);
+            add_s_again = true;
         }
 
         if (add_s_again && find(nodes_list.begin(), nodes_list.end(), s) == nodes_list.end()) {
