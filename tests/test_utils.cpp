@@ -47,7 +47,7 @@ TEST_F(Test_Utils, test_constant_degree_transformation_out) {
         count(node_list.begin(), node_list.end(), "x_A_D") &&
         count(node_list.begin(), node_list.end(), "x_A_E") &&
         count(node_list.begin(), node_list.end(), "x_A_C"));
-    EXPECT_EQ(G_prime["x_A_B"]["x_A_E"], FAKE_ZERO);
+    EXPECT_EQ(G_prime["x_A_B"]["x_A_E"], 0);
     EXPECT_EQ(G_prime["x_A_B"]["B"], 10);
     EXPECT_FALSE(G_prime.count("A"));
 }
@@ -69,7 +69,7 @@ TEST_F(Test_Utils, test_constant_degree_transformation_in) {
         count(node_list.begin(), node_list.end(), "y_C_A") &&
         count(node_list.begin(), node_list.end(), "y_D_A") &&
         count(node_list.begin(), node_list.end(), "y_E_A"));
-    EXPECT_EQ(G_prime["y_B_A"]["y_C_A"], FAKE_ZERO);
+    EXPECT_EQ(G_prime["y_B_A"]["y_C_A"], 0);
     EXPECT_EQ(G_prime["B"]["y_B_A"], 10);
     EXPECT_FALSE(G_prime.count("A"));
 }
@@ -93,12 +93,12 @@ TEST_F(Test_Utils, test_constant_degree_transformation_both) {
         EXPECT_FALSE(el.second.count("B"));
     }
     EXPECT_TRUE(G_prime.count("C") && G_prime.count("D") && G_prime.count("E"));
-    EXPECT_EQ(G_prime["x_A_B"]["A"], FAKE_ZERO);
-    EXPECT_EQ(G_prime["A"]["x_A_E"], FAKE_ZERO);
+    EXPECT_EQ(G_prime["x_A_B"]["A"], 0);
+    EXPECT_EQ(G_prime["A"]["x_A_E"], 0);
     EXPECT_EQ(G_prime["x_A_B"]["y_A_B"], 10);
     EXPECT_EQ(G_prime["x_A_C"]["C"], 10);
     EXPECT_EQ(G_prime["x_B_F"]["F"], 10);
-    EXPECT_EQ(G_prime["x_B_F"]["y_A_B"], FAKE_ZERO);
+    EXPECT_EQ(G_prime["x_B_F"]["y_A_B"], 0);
 }
 
 TEST_F(Test_Utils, test_constant_degree_transformation_already_cd) {
@@ -141,5 +141,5 @@ TEST_F(Test_Utils, test_constant_degree_transformation_2ins_3_outs) {
     EXPECT_EQ(G_prime["x_A_C"]["C"], 10);
     EXPECT_EQ(G_prime["C"]["y_C_A"], 10);
     EXPECT_EQ(G_prime["D"]["y_D_A"], 10);
-    EXPECT_EQ(G_prime["y_D_A"]["x_A_D"], FAKE_ZERO);
+    EXPECT_EQ(G_prime["y_D_A"]["x_A_D"], 0);
 }

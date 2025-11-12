@@ -161,7 +161,7 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
         int cycle_size = static_cast<int>(cycle_nodes.size());
         if (cycle_size > 2) {
             for (int j = 0; j < cycle_size; j++) {
-                G_prime[cycle_nodes[j]][cycle_nodes[(j+1)%cycle_size]] = FAKE_ZERO;
+                G_prime[cycle_nodes[j]][cycle_nodes[(j+1)%cycle_size]] = 0;
             }
         }
     }
@@ -229,7 +229,7 @@ pair<Dist_List_T, Prev_List_T> fix_results_after_cd(pair<Dist_List_T, Prev_List_
     }
 
     for (auto p: results.first) {
-        double d = round(p.second / ROUNDING_PRECISION) * ROUNDING_PRECISION;
+        Dist_T d = p.second;
         string prev = results.second[p.first];
         string node = cd_map[p.first].empty() ? p.first : cd_map[p.first];
         while (cd_map[prev] == node) {

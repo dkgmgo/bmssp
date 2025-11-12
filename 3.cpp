@@ -82,6 +82,7 @@ void relax_an_edge(string u, string v) {
 Path_T temp_Path(string u, string v) {
     Path_T p(paths[v]);
     p.length = paths[u].length + graph_[u][v];
+    p.alpha = paths[u].alpha + 1;
     return p;
 }
 

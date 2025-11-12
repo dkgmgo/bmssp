@@ -138,7 +138,7 @@ void write_big_file(int N_max) {
 }
 
 int main() {
-    params(10, 35);
+    params(1030, 2220);
     export_to_dot();
     graph_image();
 
