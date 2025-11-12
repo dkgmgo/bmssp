@@ -32,7 +32,7 @@ struct Block {
 
     typename LinkedList::iterator insert(const Item &p) {
         items.push_back(p);
-        if (p.second > upper_bound) {
+        if (upper_bound < p.second) {
             // cout << "Upper bound updated from " << upper_bound << " to " << p.second << endl;
             upper_bound = p.second;
             // This should not happen for D1 insert
@@ -258,12 +258,12 @@ private:
     BlockIt get_D0_block_position(vector<Item> block_content) {
         Item maxi = block_content.front();
         for (auto &p : block_content) {
-            if (p.second > maxi.second) {
+            if (maxi.second < p.second) {
                 maxi = p;
             }
         }
         for (auto it = D0.begin(); it != D0.end(); ++it) {
-            if (it->upper_bound > maxi.second) {
+            if (maxi.second < it->upper_bound) {
                 return it;
             }
         }
@@ -403,8 +403,8 @@ public:
             if (total_pairs() <= 0) { //if we removed all
                 x = B;
             }else {
-                Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): INF;
-                Value x1 = !is_block_sequence_empty(D1) ? D1.front().min_value() : INF;
+                Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): Value(INF);
+                Value x1 = !is_block_sequence_empty(D1) ? D1.front().min_value() : Value(INF);
                 x = min(x0, x1);
             }
             return  keys;
@@ -418,8 +418,8 @@ public:
             delete_pair(buffer[i]);
             keys.push_back(buffer[i].first);
         }
-        Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): INF;
-        Value x1 = !is_block_sequence_empty(D1) ? D1.front().min_value() : INF;
+        Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): Value(INF);
+        Value x1 = !is_block_sequence_empty(D1) ? D1.front().min_value() : Value(INF);
         x = min(x0, x1);
         return keys;
     }

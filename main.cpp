@@ -21,14 +21,15 @@ Prev_List_T constant_degree_map;
 
 void params(int N, int M) {
     graph = random_graph(N, 10, M, 42);
-    nodes_list = simple_node_list(N);
     /*graph = {
         {"A", {{"B", 10}, {"C", 10}, {"D", 10}, {"E", 10}}},
         {"C", {{"B", 10}}},
         {"D", {{"B", 10}}},
         {"B", {{"F", 10}, {"G", 10}, {"H", 10}}},
         {"E", {{"A", 10}}}
-    };*/
+    };
+    N=8;*/
+    nodes_list = simple_node_list(N);
     auto tup = constant_degree_transformation(graph, N);
     constant_degree_graph = get<0>(tup);
     constant_degree_nodes_list = get<1>(tup);
