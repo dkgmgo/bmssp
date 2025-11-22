@@ -104,18 +104,16 @@ TEST_F(Test_Utils, test_constant_degree_transformation_both) {
 TEST_F(Test_Utils, test_constant_degree_transformation_already_cd) {
     Graph G = {
         {"A", {{"B", 10}, {"C", 10}}},
-        {"C", {{"B", 10}}},
         {"D", {{"A", 10}}},
-        {"B", {{"D", 10}, {"C", 10}}},
-        {"E", {{"A", 10}}}
+        {"B", {{"D", 10}, {"C", 10}}}
     };
-    auto res = constant_degree_transformation(G, 5);
+    auto res = constant_degree_transformation(G, 4);
     Graph G_prime = get<0>(res);
     vector<string> node_list = get<1>(res);
 
-    EXPECT_EQ(node_list.size(), 5);
-    EXPECT_EQ(node_list, simple_node_list(5));
-    EXPECT_TRUE(G_prime.count("C") && G_prime.count("D") && G_prime.count("E") && G_prime.count("A") && G_prime.count("B"));
+    EXPECT_EQ(node_list.size(), 4);
+    EXPECT_EQ(node_list, simple_node_list(4));
+    EXPECT_TRUE(G_prime.count("D") && G_prime.count("A") && G_prime.count("B"));
     EXPECT_EQ(G_prime, G);
 }
 

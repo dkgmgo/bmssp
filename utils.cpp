@@ -75,7 +75,7 @@ vector<int> random_array(int N, int max_val, int seed) {
 }
 
 tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G, int N) {
-    Graph G_prime = G;
+    Graph G_prime;
     vector<string> nodes_list;
     Prev_List_T cd_map;
 
@@ -90,110 +90,65 @@ tuple<Graph, vector<string>, Prev_List_T> constant_degree_transformation(Graph G
         }
     }
 
-    vector<string> sending_nodes;
-    vector<string> receiving_nodes;
     for (int i = 0; i < N; i++) {
         string s = int_to_label(i);
         int out_size = static_cast<int>(outgoings[s].size());
         int in_size = static_cast<int>(incomings[s].size());
-        bool add_s_again = false;
+
         vector<string> cycle_nodes;
+        if ((out_size + in_size > 3) || (in_size > 2) || (out_size > 2)) {
 
-        // out-nodes
-        if (in_size <= 2 && out_size <= 2) {
-            continue;
-        }
-
-        if (out_size >= 2) {
             nodes_list.erase(find(nodes_list.begin(), nodes_list.end(), s));
-            auto it = G_prime.find(s);
-            G_prime.erase(it);
 
-            for (int j = 0; j < out_size; j++) {
-                string destination = outgoings[s][j];
-                string new_node = "x_"+s+"_"+destination;
-                //G_prime[new_node][destination] = G[s][destination];
-
+            for (string desti : outgoings[s]) {
+                string new_node = "x_"+s+"_"+desti;
                 nodes_list.push_back(new_node);
                 cycle_nodes.push_back(new_node);
-                sending_nodes.push_back(new_node);
                 cd_map[new_node] = s;
             }
-        } else if (out_size == 1) {
-            cycle_nodes.push_back(s);
-            add_s_again = true;
-        }
-
-        //in-nodes
-        if (in_size >= 2) {
-            auto it_l = find(nodes_list.begin(), nodes_list.end(), s);
-            if (it_l != nodes_list.end()) {
-                nodes_list.erase(it_l);
-            }
-            for (auto p: incomings) {
-                if (G_prime.find(p.first) != G_prime.end()) {
-                    auto it = G_prime[p.first].find(s);
-                    if (it != G_prime[p.first].end()) {
-                        G_prime[p.first].erase(it);
-                    }
-                }
-            }
-
-            for (int j = 0; j < in_size; j++) {
-                string source = incomings[s][j];
+            for (string source : incomings[s]) {
                 string new_node = "y_"+source+"_"+s;
-
                 nodes_list.push_back(new_node);
                 cycle_nodes.push_back(new_node);
-                receiving_nodes.push_back(new_node);
                 cd_map[new_node] = s;
             }
-        } else if (in_size == 1) {
-            cycle_nodes.push_back(s);
-            add_s_again = true;
-        }
 
-        if (add_s_again && find(nodes_list.begin(), nodes_list.end(), s) == nodes_list.end()) {
-            nodes_list.push_back(s);
-        }
-
-        //make cycle
-        int cycle_size = static_cast<int>(cycle_nodes.size());
-        if (cycle_size > 2) {
+            int cycle_size = static_cast<int>(cycle_nodes.size());
             for (int j = 0; j < cycle_size; j++) {
                 G_prime[cycle_nodes[j]][cycle_nodes[(j+1)%cycle_size]] = 0;
             }
         }
     }
 
-    //complete the connections
-    for (string node: sending_nodes) {
-        string A_to_B = node.substr(node.find("_")+1);
-        string A = A_to_B.substr(0, A_to_B.find("_"));
-        string B = A_to_B.substr(A_to_B.find("_")+1);
-        string dest = "y_"+A_to_B;
-
-        auto it = find(receiving_nodes.begin(), receiving_nodes.end(), dest);
-        if (it != receiving_nodes.end()) {
-            receiving_nodes.erase(it);
-        } else {
-            dest = B;
-        }
-        G_prime[node][dest] = G[A][B];
+    unordered_map<string, bool> dest_in_list;
+    for (auto u: nodes_list) {
+        dest_in_list[u] = true;
     }
-    for (string node: receiving_nodes) {
-        string A_to_B = node.substr(node.find("_")+1);
-        string A = A_to_B.substr(0, A_to_B.find("_"));
-        string B = A_to_B.substr(A_to_B.find("_")+1);
-        string src = "x_"+A_to_B;
-
-        auto it = find(sending_nodes.begin(), sending_nodes.end(), src);
-        if (it != sending_nodes.end()) {
-            sending_nodes.erase(it);
-        } else {
-            src = A;
+    for (auto u: nodes_list) {
+        if (u.find("y_") != string::npos) {
+            continue;
         }
-        G_prime[src][node] = G[A][B];
+
+        if (u.find("x_") != string::npos) {
+            string A_to_B = u.substr(u.find("_")+1);
+            string A = A_to_B.substr(0, A_to_B.find("_"));
+            string B = A_to_B.substr(A_to_B.find("_")+1);
+            string dest = "y_"+A_to_B;
+            if (dest_in_list[dest]) {
+                G_prime[u][dest] = G[A][B];
+            }else {
+                G_prime[u][B] = G[A][B];
+            }
+        }else {
+            vector<string> nei = neighbours(G, u);
+            for (auto v: nei) {
+                if (find(nodes_list.begin(), nodes_list.end(), v) != nodes_list.end()) {
+                    G_prime[u][v] = G[u][v];
+                }else {
+                    G_prime[u]["y_"+u+"_"+v] = G[u][v];
+                }
+            }
+        }
     }
 
     return {G_prime, nodes_list, cd_map};
