@@ -11,79 +11,63 @@
 
 #include "BBL_DS.hpp"
 
-struct comp {
-    bool operator()(const pair<string, Dist_T> &lhs, const pair<string, Dist_T> &rhs) const{
-        return lhs.second >= rhs.second;
-    }
-};
-
 struct Path_T {
     Dist_T length;
-    string node;
-    string parent;
+    Node_id_T node;
+    Node_id_T parent;
     int alpha; // number of nodes in the path
 
     Path_T() {
         length = INF;
         parent = "None";
         alpha = 0;
+        node = "ZZ";
     }
 
     Path_T(Dist_T ub) {
         length = ub;
-        alpha = INF;
+        alpha = 0;
+        parent = "None";
         node = "ZZ";
     }
 
-    bool operator<(const Path_T& o) const {
-        if (length != o.length) {
-            return length < o.length;
-        }
-        if (alpha != o.alpha) {
-            return alpha < o.alpha;
-        }
-        return node.compare(o.node) < 0;
+    Path_T(Dist_T l, int a, Node_id_T n, Node_id_T p) {
+        length = l;
+        alpha = a;
+        parent = p;
+        node = n;
     }
 
-    bool operator<=(const Path_T& o) const {
-        if (length != o.length) {
-            return length <= o.length;
-        }
-        if (alpha != o.alpha) {
-            return alpha <= o.alpha;
-        }
-        return node.compare(o.node) <= 0;
+    bool operator==(const Path_T& other) const {
+        return tie(length, alpha, node)
+             == tie(other.length, other.alpha, other.node);
     }
-
-    bool operator>(const Path_T o) const {
-        if (length != o.length) {
-            return length > o.length;
-        }
-        if (alpha != o.alpha) {
-            return alpha > o.alpha;
-        }
-        return node.compare(o.node) > 0;
+    bool operator<(const Path_T& other) const {
+        return tie(length, alpha, node)
+             < tie(other.length, other.alpha, other.node);
     }
+    bool operator!=(const Path_T& other) const { return !(*this == other); }
+    bool operator>(const Path_T& other)  const { return other < *this; }
+    bool operator<=(const Path_T& other) const { return !(other < *this); }
+    bool operator>=(const Path_T& other) const { return !(*this < other); }
 
-    bool operator==(const Path_T& o) const {
-        return length == o.length && alpha == o.alpha && node.compare(o.node) == 0;
+    string operator+(const string& other) const {
+        return other + "Length: " + to_string(length) + " Alpha: " + to_string(alpha) + " Parent: " + parent + " Node: " + node;
     }
 };
 
 Graph graph_;
-unordered_map<string, Path_T> paths;
+unordered_map<Node_id_T, Path_T> paths;
+std::unordered_map<std::string, Node_id_T> nodeToId;
 
-void relax_an_edge(string u, string v) {
+void relax_an_edge(Node_id_T u, Node_id_T v) {
     paths[v].length = paths[u].length + graph_[u][v];
     paths[v].alpha = paths[u].alpha + 1;
     paths[v].parent = paths[u].node;
 }
 
-Path_T temp_Path(string u, string v) {
-    Path_T p(paths[v]);
-    p.length = paths[u].length + graph_[u][v];
-    p.alpha = paths[u].alpha + 1;
-    return p;
+Path_T temp_Path(Node_id_T u, Node_id_T v) {
+    return Path_T(paths[u].length + graph_[u][v], paths[u].alpha + 1, v, u);
 }
 
 pair<Path_T, unordered_set<string>> base_case_of_BMSSP(int k, Path_T B, vector<string> S) {
@@ -107,6 +91,7 @@ pair<Path_T, unordered_set<string>> base_case_of_BMSSP(int k, Path_T B, vector<s
         if (visited[u]) {
             continue;
         }
+        // TODO add break condition on k
 
         visited[u] = true;
         U0.push_back(u);
@@ -130,6 +115,9 @@ pair<Path_T, unordered_set<string>> base_case_of_BMSSP(int k, Path_T B, vector<s
     } else {
         Path_T B_prime = paths[U0.back()]; // due to vector and priority queue the max is the last one
         U0.pop_back(); // we have k+1 and we want k elements
+        if (U0.size() > k) {
+            throw runtime_error("Check your base case logic it's not good");
+        }
         return {B_prime, unordered_set<string>(U0.begin(), U0.end())};
     }
 }
@@ -174,7 +162,8 @@ pair<unordered_set<string>, unordered_set<string>> find_pivots(int k, Path_T B, 
     for (string u : W) {
         vector<string> neis = neighbours(graph_, u);
         for (string v : neis) {
-            if (inW[v] && paths[v].length == paths[u].length + graph_[u][v]) {
+            Path_T temp = temp_Path(u, v);
+            if (inW[v] && paths[v] == temp) {
                 F[u].insert(v);
                 in_degree[v]++;
             }
@@ -204,29 +193,30 @@ pair<Path_T, unordered_set<string>> BMSSP(int t, int k, int l, Path_T B, vector<
     int M = static_cast<int>(pow(2, (l - 1) * t));
     BBL_DS<string, Path_T> D;
     D.initialize(M, B);
+    Path_T B_prime = B;
     for (string x : P) {
         D.insert_pair({x, paths[x]});
+        B_prime = min(B_prime, paths[x]);
     }
-    Path_T prev_B_prime = B;
     unordered_set<string> U;
 
-    Path_T mini(INF);
-    for (string x : P) {
-        mini = min(mini, paths[x]);
-    }
-    prev_B_prime = mini;
     auto max_u_size = k * pow(2, l * t);
 
     while (static_cast<int>(U.size()) < max_u_size && !D.empty()) {
         Path_T Bi;
         auto Si = D.pull(Bi);
 
+        Path_T prev_B_prime = B_prime;
         auto bmssp = BMSSP(t, k, l-1, Bi, Si);
         U.insert(bmssp.second.begin(), bmssp.second.end());
-        Path_T Bi_prime = bmssp.first;
+        B_prime = bmssp.first;
+        assert(prev_B_prime <= B_prime);
 
         vector<pair<string, Path_T>> K;
         for (string u : bmssp.second) {
+            if (D.contains(u)) {
+                D.delete_pair({u, paths[u]});
+            }
             vector<string> neis = neighbours(graph_, u);
             for (string v : neis) {
                 Path_T temp = temp_Path(u, v);
@@ -234,29 +224,21 @@ pair<Path_T, unordered_set<string>> BMSSP(int t, int k, int l, Path_T B, vector<
                     relax_an_edge(u, v);
                     if (Bi <= temp && temp < B) {
                         D.insert_pair({v, temp});
-                    } else if (Bi_prime <= temp && temp < Bi) {
+                    } else if (B_prime <= temp && temp < Bi) {
                         K.push_back({v, temp});
                     }
                 }
             }
         }
         for (string x : Si) {
-            if (Bi_prime <= paths[x] && paths[x] < Bi) {
+            if (B_prime <= paths[x] && paths[x] < Bi) {
                 K.push_back({x, paths[x]});
             }
         }
         D.batch_prepend(K);
-        prev_B_prime = Bi_prime;
     }
 
-    Path_T B_prime = min(prev_B_prime, B);
-
-    if (D.empty()) {
-        B_prime = B;
-    }else {
-        B_prime = prev_B_prime;
-    }
-
+    B_prime = min(B_prime, B);
     for (string x : W) {
         if (paths[x] < B_prime) {
             U.insert(x);

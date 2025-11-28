@@ -104,8 +104,8 @@ pair<double, int> test(function<pair<Dist_List_T, Prev_List_T> (Graph&, string, 
         if (mismatch == 0) {
             cout << "Same results" << endl;
         } else {
-            cout << "Different results" << endl;
             cout << "Mismatch: " << mismatch << endl;
+            throw runtime_error("Different results");
         }
     }
     prev_dist = results.first;
@@ -119,9 +119,10 @@ pair<double, int> test(function<pair<Dist_List_T, Prev_List_T> (Graph&, string, 
 void write_big_file(int N_max) {
     ofstream file("big_file.txt");
 
-    for (int i=3; i<=N_max; i+=10) {
-        for (int j=i; j<=3*i; j+=7) {
+    for (int i=2; i<=N_max; i+=1) {
+        for (int j=i; j<=5*i; j+=1) {
             params(i, j);
+            cout << "N: " << i << " M: "<< j << endl;
             prev_dist.clear();
             string line;
             auto res = test(min_heap_dijkstra);
@@ -138,17 +139,17 @@ void write_big_file(int N_max) {
 }
 
 int main() {
-    params(1030, 2220);
+    /*params(31, 128);
     export_to_dot();
-    graph_image();
+    //graph_image();
 
     test(dijkstra);
     test(min_heap_dijkstra);
     verbose = true;
     test(fibo_heap_dijkstra);
     //verbose = false;
-    test(top_level_BMSSP, true);
-    //write_big_file(20000);
+    test(top_level_BMSSP, true);*/
+    write_big_file(20000);
 
     return 0;
 }

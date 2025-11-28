@@ -5,7 +5,6 @@
 #ifndef DIJKSTRA_BBL_DS_HPP
 #define DIJKSTRA_BBL_DS_HPP
 
-#include <limits>
 #include <list>
 #include <unordered_map>
 #include <vector>
@@ -32,24 +31,7 @@ struct Block {
 
     typename LinkedList::iterator insert(const Item &p) {
         items.push_back(p);
-        if (upper_bound < p.second) {
-            // cout << "Upper bound updated from " << upper_bound << " to " << p.second << endl;
-            upper_bound = p.second;
-            // This should not happen for D1 insert
-        }
         return prev(items.end());
-    }
-
-    void recompute_upper_bound() {
-        if (items.empty()) {
-            cout << "/!\\ Recompute upper bound: empty block" << endl;
-            return;
-        }
-        Value new_ub = -1*INF;
-        for (auto &p : items) {
-            new_ub = max(new_ub, p.second);
-        }
-        upper_bound = new_ub;
     }
 
     void remove(typename LinkedList::iterator it) {
@@ -131,7 +113,7 @@ private:
             return D1.end();
         }
 
-        //conversion block_it to block_ptr
+        //conversion ptr to it
         Block<Key, Value> *block_ptr = node->data.block_ptr;
         for (auto it = D1.begin(); it != D1.end(); ++it) {
             if (&*it == block_ptr) {
@@ -141,32 +123,38 @@ private:
         return D1.end();
     }
 
-    void block_batch_insert(vector<Item> &L, BlockIt block_it) {
+    void block_batch_insert(vector<Item> &L, BlockIt block_it, bool update_ub=false) {
+        Value ub = Value(-1*INF);
         for (auto &p : L) {
             ItemIt item_it = block_it->insert(p);
             keymap[p.first] = {block_it, item_it};
+            ub = max(ub, p.second);
+        }
+        if (update_ub) {
+            block_it->upper_bound = ub;
         }
     }
 
     void split_D1_block(BlockIt block_it) {
         vector<Item> block_items(block_it->items.begin(), block_it->items.end());
-        vector<vector<Item>> blocks = blocks_content_by_median(block_items, M); // 2 blocks
+        vector<vector<Item>> blocks = blocks_content_by_median(block_items, M/2 + 1); // 2 blocks
+
+        if (blocks.size() > 2) {
+            throw invalid_argument("/!\\ Split D1 block: more than 2 blocks" );
+        }
 
         BlockT new_block;
         new_block.location = BlockT::Location::D1;
         BlockIt new_block_it = D1.insert(block_it, move(new_block)); // before
 
         block_it->items.clear();
-        block_batch_insert(blocks[0], new_block_it);
+        block_batch_insert(blocks[0], new_block_it, true);
         block_batch_insert(blocks[1], block_it);
 
-        // upper bounds
-        new_block_it->recompute_upper_bound();
         register_block_in_RBT(new_block_it);
 
         // the second block with bigger values is already in D1
         unregister_block_in_RBT(block_it);
-        block_it->recompute_upper_bound();
         register_block_in_RBT(block_it);
     }
 
@@ -181,7 +169,7 @@ private:
 
         int mid = static_cast<int>(L.size())/2;
         nth_element(L.begin(), L.begin()+mid, L.end(), [](auto &a, auto &b) {
-            return a.second == b.second ? a.first < b.first : a.second < b.second;
+            return a.second < b.second;
         });
         Value median_val = L[mid].second;
         Key median_key = L[mid].first;
@@ -209,7 +197,7 @@ private:
 
     vector<vector<Item>> blocks_content_by_median(vector<Item> &L, int block_size) {
         vector<vector<Item>> sortie;
-        if (block_size == static_cast<int>(L.size())) {
+        if (block_size >= static_cast<int>(L.size())) {
             sortie.push_back(L);
         }else {
             blocks_content_by_median_helper(sortie, L, block_size);
@@ -228,8 +216,10 @@ private:
             if (block_it->location == BlockT::Location::D0) {
                 D0.erase(block_it);
             } else {
-                unregister_block_in_RBT(block_it);
-                D1.erase(block_it);
+                if (block_it->upper_bound != B) {
+                    unregister_block_in_RBT(block_it);
+                    D1.erase(block_it);
+                }
             }
         }
     }
@@ -312,15 +302,7 @@ public:
 
         BlockIt block_it = which_D1_block_for_value(p.second);
         if (block_it == D1.end()) {
-            // No existing block has ub >= value
-            // This should happen only when D1 is empty
-            // cout << "Insert Pair: No existing block has ub >= value " << p.second << endl;
-            BlockT block(p.second);
-            D1.emplace_back(block);
-            BlockIt new_block_it = prev(D1.end());
-            new_block_it->location = BlockT::Location::D1;
-            register_block_in_RBT(new_block_it);
-            block_it = new_block_it;
+            throw invalid_argument("Insert Pair: No existing block has ub >= value " + (p.second+""));
         }
 
         ItemIt item_it = block_it->insert(p);
@@ -336,37 +318,28 @@ public:
             return;
         }
 
-        // handle duplicates
-        sort(L.begin(), L.end(), [](auto &a, auto &b) {
-           if (a.first != b.first) {
-               return a.first < b.first;
-           }
-            return a.second < b.second;
-        });
+        // handle duplicates and existing
         vector<Item> cleaned_L;
-        for (size_t i=0; i<L.size();) {
-            size_t j = i+1;
-            Value mini = L[i].second;
-            while (j<L.size() && L[j].first == L[i].first) {
-                mini = min(mini, L[j].second);
-                j++;
+        for (auto p: L) {
+            if (find(cleaned_L.begin(), cleaned_L.end(), p) != cleaned_L.end()) {
+                continue;
             }
-            cleaned_L.push_back({L[i].first, mini});
-            i = j;
-        }
-        L.swap(cleaned_L);
-
-        for (auto p : L) {
             auto it = keymap.find(p.first);
             if (it != keymap.end()) {
-                // cout << "Batch Prepend: Key " << p.first << " already exists." << endl;
-                delete_pair_from_keymap_it(it);
+                Value old_v = it->second.second->second;
+                if (p.second < old_v) {
+                    //cout << "Batch Prepend: Key " << p.first << " already exists and deleted." << endl;
+                    delete_pair_from_keymap_it(it);
+                }else {
+                    continue;
+                }
             }
+            cleaned_L.push_back(p);
         }
 
         bool just_push_all = is_block_sequence_empty(D0);
-        int block_size = static_cast<int>(L.size()) <= M ? M : (M+1)/2;
-        vector<vector<Item>> blocks = blocks_content_by_median(L, block_size);
+        int block_size = static_cast<int>(cleaned_L.size()) <= M ? M : (M+1)/2;
+        vector<vector<Item>> blocks = blocks_content_by_median(cleaned_L, block_size);
 
         for (int i = static_cast<int>(blocks.size())-1; i >= 0; --i) {
             BlockT block{};
@@ -388,7 +361,6 @@ public:
         vector<Item> buffer;
         vector<Key> keys;
         buffer.reserve(2*M);
-        x = numeric_limits<Value>::max();
 
         fill_buffer_for_pull(buffer, D0);
         fill_buffer_for_pull(buffer, D1);
@@ -400,7 +372,7 @@ public:
                 delete_pair(p);
                 keys.push_back(p.first);
             }
-            if (total_pairs() <= 0) { //if we removed all
+            if (total_pairs() <= 0) { //if we removed all //TODO check this (always true here)
                 x = B;
             }else {
                 Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): Value(INF);
@@ -411,7 +383,7 @@ public:
         }
 
         nth_element(buffer.begin(), buffer.begin()+M, buffer.end(), [](auto &a, auto &b) {
-            return a.second == b.second ? a.first < b.first : a.second < b.second;
+            return a.second < b.second;
         });
 
         for (int i = 0; i < M; i++) {
@@ -434,6 +406,10 @@ public:
 
     pair<BlockSeq, BlockSeq> get_sequences() {
         return {D0, D1};
+    }
+
+    bool contains(Key key) {
+        return keymap.find(key) != keymap.end();
     }
 };
 

@@ -17,9 +17,10 @@
 
 using namespace std;
 using Dist_T = double;
-using Dist_List_T = unordered_map<string, Dist_T>;
-using Prev_List_T = unordered_map<string, string>;
-using Graph = unordered_map<string, Dist_List_T>;
+using Node_id_T = string;
+using Dist_List_T = unordered_map<Node_id_T, Dist_T>;
+using Prev_List_T = unordered_map<Node_id_T, Node_id_T>;
+using Graph = unordered_map<Node_id_T, Dist_List_T>;
 
 vector<string> neighbours(Graph& graph, string cur);
 
