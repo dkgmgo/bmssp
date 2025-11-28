@@ -8,6 +8,7 @@
 #include <list>
 #include <unordered_map>
 #include <vector>
+#include <sstream>
 #define INF 10000000
 
 #include "RBT.hpp"
@@ -260,6 +261,21 @@ private:
         return D0.end();
     }
 
+    string value_as_string(Value v) {
+        ostringstream oss;
+        oss << v;
+        return oss.str();
+    }
+
+    typename vector<Item>::iterator find_key_in_seq(Key key, vector<Item> &seq) {
+        for (auto it = seq.begin(); it != seq.end(); ++it) {
+            if (it->first == key) {
+                return it;
+            }
+        }
+        return seq.end();
+    }
+
 public:
     BBL_DS() = default;
 
@@ -302,7 +318,7 @@ public:
 
         BlockIt block_it = which_D1_block_for_value(p.second);
         if (block_it == D1.end()) {
-            throw invalid_argument("Insert Pair: No existing block has ub >= value " + (p.second+""));
+            throw invalid_argument("Insert Pair: No existing block has ub >= value "+value_as_string(p.second));
         }
 
         ItemIt item_it = block_it->insert(p);
@@ -321,8 +337,13 @@ public:
         // handle duplicates and existing
         vector<Item> cleaned_L;
         for (auto p: L) {
-            if (find(cleaned_L.begin(), cleaned_L.end(), p) != cleaned_L.end()) {
-                continue;
+            auto it_v = find_key_in_seq(p.first, cleaned_L);
+            if (it_v != cleaned_L.end()) {
+                if (p.second < it_v->second) {
+                    cleaned_L.erase(it_v);
+                }else {
+                    continue;
+                }
             }
             auto it = keymap.find(p.first);
             if (it != keymap.end()) {

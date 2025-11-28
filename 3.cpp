@@ -51,8 +51,13 @@ struct Path_T {
     bool operator<=(const Path_T& other) const { return !(other < *this); }
     bool operator>=(const Path_T& other) const { return !(*this < other); }
 
-    string operator+(const string& other) const {
-        return other + "Length: " + to_string(length) + " Alpha: " + to_string(alpha) + " Parent: " + parent + " Node: " + node;
+    friend ostream& operator<<(ostream& os, const Path_T& p) {
+        os << "{length=" << p.length
+           << ", node=" << p.node
+           << ", parent=" << p.parent
+           << ", alpha=" << p.alpha
+           << "}";
+        return os;
     }
 };
 
