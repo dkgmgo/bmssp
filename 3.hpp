@@ -3,6 +3,6 @@
 
 #include "utils.hpp"
 
-pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& graph, string src, vector<string> nodes_list);
+pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& graph, Node_id_T src, int N);
 
 #endif

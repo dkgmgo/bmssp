@@ -12,21 +12,20 @@
 
 struct Runner {
     Graph graph;
-    vector<string> nodes_list;
+    int N;
     Graph constant_degree_graph;
-    vector<string> constant_degree_nodes_list;
-    Prev_List_T constant_degree_map;
-    string src;
+    int cd_N;
+    Node_id_T src;
     Dist_List_T prev_dist;
     bool verbose = true;
 
-    void initialize(int N, int M) {
+    void initialize(int N_, int M) {
+        N=N_;
+        src = 0;
         graph = random_graph(N, 10, M, 42);
-        nodes_list = simple_node_list(N);
-        auto tup = constant_degree_transformation(graph, N);
-        constant_degree_graph = get<0>(tup);
-        constant_degree_nodes_list = get<1>(tup);
-        constant_degree_map = get<2>(tup);
+        auto cd = constant_degree_transformation(graph, N);
+        constant_degree_graph = cd.first;
+        cd_N = cd.second;
     }
 
     void printResults(Dist_List_T dist, Prev_List_T parent) {
@@ -68,16 +67,12 @@ struct Runner {
         }
     }
 
-    pair<double, int> run_test(function<pair<Dist_List_T, Prev_List_T> (Graph&, string, vector<string>)> algo, bool use_cd = false) {
-        Graph g = use_cd ? constant_degree_graph : graph;
-        vector<string> n_l = use_cd ? constant_degree_nodes_list : nodes_list;
-        src = use_cd ? get_source_from_nodes(constant_degree_nodes_list) : get_source_from_nodes(nodes_list);
+    pair<double, int> run_test(function<pair<Dist_List_T, Prev_List_T> (Graph&, Node_id_T, int)> algo, bool use_cd = false) {
+        Graph &g = use_cd ? constant_degree_graph : graph;
+        int n = use_cd ? cd_N : N;
 
         auto t0 = chrono::high_resolution_clock::now();
-        pair<Dist_List_T, Prev_List_T> results = algo(g, src, n_l);
-        if (use_cd) {
-            results = fix_results_after_cd(results, constant_degree_map, nodes_list);
-        }
+        pair<Dist_List_T, Prev_List_T> results = algo(g, src, n);
         chrono::duration<double, milli> time_span = chrono::high_resolution_clock::now() - t0;
 
         //printResults(results.first, results.second);
@@ -107,15 +102,15 @@ struct Runner {
 
     void quicktest(int N, int M) {
         initialize(N, M);
-        //export_to_dot();
-        //graph_image();
+        export_to_dot();
+        graph_image();
 
-        //run_test(dijkstra);
+        run_test(dijkstra);
         run_test(min_heap_dijkstra);
         verbose = true;
         run_test(fibo_heap_dijkstra);
         //verbose = false;
-        run_test(top_level_BMSSP, false);
+        run_test(top_level_BMSSP);
         run_test(top_level_BMSSP, true);
     }
 

@@ -5,10 +5,10 @@
 
 #include "1.hpp"
 
-string minDistance(vector<string> queue, Dist_List_T dist) {
+Node_id_T minDistance(vector<Node_id_T> queue, Dist_List_T dist) {
     Dist_T mini = INF;
-    string sortie;
-    for (const string& node: queue) {
+    Node_id_T sortie;
+    for (const Node_id_T& node: queue) {
         if (dist[node] <= mini) {
             mini = dist[node];
             sortie = node;
@@ -17,25 +17,25 @@ string minDistance(vector<string> queue, Dist_List_T dist) {
     return sortie;
 }
 
-pair<Dist_List_T, Prev_List_T> dijkstra(Graph& graph, string src, vector<string> nodes_list) {
+pair<Dist_List_T, Prev_List_T> dijkstra(Graph& graph, Node_id_T src, int N) {
     Dist_List_T dist;
     Prev_List_T parent;
-    vector<string> queue;
-    for (auto s: nodes_list) {
-        dist[s] = INF;
-        parent[s] = "None";
-        queue.push_back(s);
+    vector<Node_id_T> queue;
+    for (int i=0; i < N; i++) {
+        dist[i] = INF;
+        parent[i] = -1;
+        queue.push_back(i);
     }
 
     dist[src] = 0;
 
     while (!queue.empty()) {
 
-        string cur = minDistance(queue, dist);
+        Node_id_T cur = minDistance(queue, dist);
         queue.erase(find(queue.begin(), queue.end(), cur));
 
-        vector<string> neis = neighbours(graph, cur);
-        for (string nei: neis) {
+        vector<Node_id_T> neis = neighbours(graph, cur);
+        for (Node_id_T nei: neis) {
             Dist_T temp = dist[cur] + graph[cur][nei];
             bool not_visited = find(queue.begin(), queue.end(), nei) != queue.end();
             if (not_visited && temp < dist[nei]) {
