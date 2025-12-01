@@ -3,3 +3,6 @@ cmake-build-*/
 
 # Jetbrains
 .idea/
+
+# big graphml files
+data/

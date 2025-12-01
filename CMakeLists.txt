@@ -4,6 +4,7 @@ project(main)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(.)
+find_package( Boost COMPONENTS graph)
 
 add_executable(main
         utils.cpp
@@ -14,6 +15,7 @@ add_executable(main
         RBT.hpp
         BBL_DS.hpp
 )
+target_link_libraries(main PRIVATE ${Boost_LIBRARIES})
 
 include(FetchContent)
 FetchContent_Declare(

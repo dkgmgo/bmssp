@@ -6,6 +6,7 @@
 #include <fstream>
 
 #include "utils.hpp"
+#include "file_utils.hpp"
 #include "3.hpp"
 #include "2.hpp"
 #include "1.hpp"
@@ -15,14 +16,24 @@ struct Runner {
     int N;
     Graph constant_degree_graph;
     int cd_N;
-    Node_id_T src;
+    Node_id_T src = 0;
     Dist_List_T prev_dist;
     bool verbose = true;
 
     void initialize(int N_, int M) {
+        prev_dist.clear();
         N=N_;
-        src = 0;
         graph = random_graph(N, 10, M, 42);
+        auto cd = constant_degree_transformation(graph, N);
+        constant_degree_graph = cd.first;
+        cd_N = cd.second;
+    }
+
+    void initialize(const string &filename) {
+        prev_dist.clear();
+        auto in = FileUtils::read_bgp_graphml(filename);
+        graph = in.first;
+        N = in.second;
         auto cd = constant_degree_transformation(graph, N);
         constant_degree_graph = cd.first;
         cd_N = cd.second;
@@ -101,28 +112,42 @@ struct Runner {
     }
 
     void quicktest(int N, int M) {
+        cout << "=========== Quicktest on a random graph N: " << N << ", M: " << M  << " ===========>" << endl;
         initialize(N, M);
-        export_to_dot();
-        graph_image();
+        //export_to_dot();
+        //graph_image();
 
-        run_test(dijkstra);
-        run_test(min_heap_dijkstra);
+        //cout << "Vanilla Dijkstra" << endl; run_test(dijkstra);
+        cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
         verbose = true;
-        run_test(fibo_heap_dijkstra);
+        cout << "Fibo heap Dijkstra" << endl;run_test(fibo_heap_dijkstra);
         //verbose = false;
-        run_test(top_level_BMSSP);
-        run_test(top_level_BMSSP, true);
+        cout << "BMSSP no cd" << endl;run_test(top_level_BMSSP);
+        cout << "BMSSP" << endl;run_test(top_level_BMSSP, true);
+    }
+
+    void quicktest(const string &filename) {
+        cout << "=========== Quicktest on a graphml from file: " << filename << " ===========>" << endl;
+        initialize(filename);
+
+        //cout << "Vanilla Dijkstra" << endl; run_test(dijkstra);
+        cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
+        verbose = true;
+        cout << "Fibo heap Dijkstra" << endl;run_test(fibo_heap_dijkstra);
+        //verbose = false;
+        cout << "BMSSP no cd" << endl;run_test(top_level_BMSSP);
+        cout << "BMSSP" << endl;run_test(top_level_BMSSP, true);
     }
 
     /**
-     * Finds de next combination of parameters where we have different distances than dijkstra
+     * Comparing on many random graphs
      * @param N_max
      */
     void write_big_file(int N_max) {
         ofstream file("big_file.txt");
 
-        for (int i=2; i<=N_max; i+=52) {
-            for (int j=i; j<=3*i; j+=86) {
+        for (int i=3; i<=N_max; i+=521) {
+            for (int j=i; j<=3*i; j+=i/3) {
                 initialize(i, j);
                 cout << "N: " << i << " M: "<< j << endl;
                 prev_dist.clear();
@@ -132,6 +157,9 @@ struct Runner {
                 res = run_test(fibo_heap_dijkstra);
                 line += "\n Fibo_heap_dijkstra:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
                 double fibo_time = res.first;
+                res = run_test(top_level_BMSSP);
+                line += "\n BMSSP_no_cd:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+                line += "\n BMSSP_no_cd_time/Fibo_heap_dijkstra_time = " + to_string(res.first/fibo_time);
                 res = run_test(top_level_BMSSP, true);
                 line += "\n BMSSP:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
                 line += "\n BMSSP_time/Fibo_heap_dijkstra_time = " + to_string(res.first/fibo_time) + "\n";
