@@ -25,7 +25,7 @@ vector<Node_id_T> neighbours(Graph& graph, Node_id_T cur);
 
 int subtree_size(Node_id_T node, unordered_map<Node_id_T, unordered_set<Node_id_T>> forest);
 
-Graph random_graph(int N, int max_weight, int edges, int seed);
+Graph random_graph(long N, int max_weight, long edges, int seed);
 
 pair<Graph, int> constant_degree_transformation(Graph G, int N);
 

@@ -27,13 +27,24 @@ int subtree_size(Node_id_T node, unordered_map<Node_id_T, unordered_set<Node_id_
     return subtree_size_helper(node, forest, visited);
 }
 
-Graph random_graph(int N, int max_weight, int edges, int seed) {
+Graph random_graph(long N, int max_weight, long edges, int seed) {
     Graph graph;
 
     mt19937 rng(seed);
     uniform_int_distribution<> distr1(1, max_weight);
     uniform_int_distribution<> distr2(0, N-1);
     edges = min(edges, N*(N-1));
+
+    if (edges < 0) {
+        throw runtime_error("edges must be greater than 0");
+    }
+
+    //connect the source 0 with something
+    int zero_outs = max(1l, edges/N);
+    for (int i = 0; i < zero_outs; i++) {
+        graph[0][distr2(rng)] = distr1(rng);
+        edges--;
+    }
 
     while (edges > 0) {
         int u = distr2(rng);

@@ -120,10 +120,10 @@ struct Runner {
         //cout << "Vanilla Dijkstra" << endl; run_test(dijkstra);
         cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
         verbose = true;
-        cout << "Fibo heap Dijkstra" << endl;run_test(fibo_heap_dijkstra);
+        cout << "Fibo heap Dijkstra" << endl; run_test(fibo_heap_dijkstra);
         //verbose = false;
-        cout << "BMSSP no cd" << endl;run_test(top_level_BMSSP);
-        cout << "BMSSP" << endl;run_test(top_level_BMSSP, true);
+        cout << "BMSSP no cd" << endl; run_test(top_level_BMSSP);
+        cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
     }
 
     void quicktest(const string &filename) {
@@ -133,10 +133,10 @@ struct Runner {
         //cout << "Vanilla Dijkstra" << endl; run_test(dijkstra);
         cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
         verbose = true;
-        cout << "Fibo heap Dijkstra" << endl;run_test(fibo_heap_dijkstra);
+        cout << "Fibo heap Dijkstra" << endl; run_test(fibo_heap_dijkstra);
         //verbose = false;
-        cout << "BMSSP no cd" << endl;run_test(top_level_BMSSP);
-        cout << "BMSSP" << endl;run_test(top_level_BMSSP, true);
+        cout << "BMSSP no cd" << endl; run_test(top_level_BMSSP);
+        cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
     }
 
     /**
