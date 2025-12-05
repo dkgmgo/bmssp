@@ -15,7 +15,6 @@ struct Runner {
     Graph graph;
     int N;
     Graph constant_degree_graph;
-    int cd_N;
     Node_id_T src = 0;
     Dist_List_T prev_dist;
     bool verbose = true;
@@ -26,7 +25,6 @@ struct Runner {
         graph = random_graph(N, 10, M, 42);
         auto cd = constant_degree_transformation(graph, N);
         constant_degree_graph = cd.first;
-        cd_N = cd.second;
     }
 
     void initialize(const string &filename) {
@@ -36,35 +34,21 @@ struct Runner {
         N = in.second;
         auto cd = constant_degree_transformation(graph, N);
         constant_degree_graph = cd.first;
-        cd_N = cd.second;
     }
 
     void printResults(Dist_List_T dist, Prev_List_T parent) {
         cout << "Shortest distances from node " << src << ":\n";
-        for (auto p : dist) {
-            if (p.second == INF)
-                cout << "Node " << p.first << ": INF" << " m : " << parent[p.first] << "\n";
+        for (int i=0; i<N; i++) {
+            if (dist[i] == INF)
+                cout << "Node " << i << ": INF" << " m : " << parent[i] << "\n";
             else
-                cout << "Node " << p.first << ": " << p.second << " m : " << parent[p.first] << "\n";
+                cout << "Node " << i << ": " << dist[i] << " m : " << parent[i] << "\n";
         }
-    }
-
-    void export_to_dot_(const string &filename, bool cd_graph=false) {
-        Graph g = cd_graph ? constant_degree_graph : graph;
-        ofstream file(filename);
-        file << "digraph G {\n";
-        for (const auto& line : g) {
-            for (const auto& p : line.second) {
-                file << "  " << line.first << " -> " << p.first << " [label=\"" << p.second << "\"];\n";
-            }
-        }
-        file << "}\n";
-        file.close();
     }
 
     void export_to_dot() {
-        export_to_dot_("graph.dot");
-        export_to_dot_("cd_graph.dot", true);
+        FileUtils::export_to_dot("graph.dot", graph);
+        FileUtils::export_to_dot("cd_graph.dot", constant_degree_graph);
     }
 
     void graph_image() {
@@ -80,10 +64,9 @@ struct Runner {
 
     pair<double, int> run_test(function<pair<Dist_List_T, Prev_List_T> (Graph&, Node_id_T, int)> algo, bool use_cd = false) {
         Graph &g = use_cd ? constant_degree_graph : graph;
-        int n = use_cd ? cd_N : N;
 
         auto t0 = chrono::high_resolution_clock::now();
-        pair<Dist_List_T, Prev_List_T> results = algo(g, src, n);
+        pair<Dist_List_T, Prev_List_T> results = algo(g, src, N);
         chrono::duration<double, milli> time_span = chrono::high_resolution_clock::now() - t0;
 
         //printResults(results.first, results.second);
@@ -92,10 +75,10 @@ struct Runner {
 
         int mismatch = 0;
         if (!prev_dist.empty()) {
-            for (auto el: prev_dist) {
-                if (el.second != results.first[el.first]) {
+            for (int i=0; i<N; i++) {
+                if (prev_dist[i] != results.first[i] && prev_dist[i] < INF) {
                     if (verbose) {
-                        cout << "Different at " << el.first << " " << el.second << " " << results.first[el.first] << endl;
+                        cout << "Different at " << i << " " << prev_dist[i] << " " << results.first[i] << endl;
                     }
                     mismatch++;
                 }
@@ -121,6 +104,7 @@ struct Runner {
         cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
         verbose = true;
         cout << "Fibo heap Dijkstra" << endl; run_test(fibo_heap_dijkstra);
+        cout << "Boost Dijkstra" << endl; run_test(boost_dijkstra);
         //verbose = false;
         cout << "BMSSP no cd" << endl; run_test(top_level_BMSSP);
         cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
@@ -134,6 +118,7 @@ struct Runner {
         cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
         verbose = true;
         cout << "Fibo heap Dijkstra" << endl; run_test(fibo_heap_dijkstra);
+        cout << "Boost Dijkstra" << endl; run_test(boost_dijkstra);
         //verbose = false;
         cout << "BMSSP no cd" << endl; run_test(top_level_BMSSP);
         cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
@@ -143,7 +128,7 @@ struct Runner {
      * Comparing on many random graphs
      * @param N_max
      */
-    void write_big_file(int N_max) {
+    void write_big_file(long long N_max) {
         ofstream file("big_file.txt");
 
         for (int i=3; i<=N_max; i+=521) {
@@ -152,7 +137,9 @@ struct Runner {
                 cout << "N: " << i << " M: "<< j << endl;
                 prev_dist.clear();
                 string line;
-                auto res = run_test(min_heap_dijkstra);
+                auto res = run_test(boost_dijkstra);
+                line += "\n Boost_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+                res = run_test(min_heap_dijkstra);
                 line += "\n Min_heap_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
                 res = run_test(fibo_heap_dijkstra);
                 line += "\n Fibo_heap_dijkstra:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);

@@ -34,9 +34,11 @@ pair<Dist_List_T, Prev_List_T> dijkstra(Graph& graph, Node_id_T src, int N) {
         Node_id_T cur = minDistance(queue, dist);
         queue.erase(find(queue.begin(), queue.end(), cur));
 
-        vector<Node_id_T> neis = neighbours(graph, cur);
-        for (Node_id_T nei: neis) {
-            Dist_T temp = dist[cur] + graph[cur][nei];
+        auto outs = boost::out_edges(cur, graph);
+        auto ei = outs.first; auto ei_end = outs.second;
+        for (; ei != ei_end; ++ei) {
+            Node_id_T nei = boost::target(*ei, graph);
+            Dist_T temp = dist[cur] + boost::get(boost::edge_weight, graph, *ei);
             bool not_visited = find(queue.begin(), queue.end(), nei) != queue.end();
             if (not_visited && temp < dist[nei]) {
                 dist[nei] = temp;

@@ -12,20 +12,22 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <boost/graph/adjacency_list.hpp>
 #define INF 10000000
 
 using namespace std;
 using Dist_T = double;
 using Node_id_T = int;
-using Dist_List_T = unordered_map<Node_id_T, Dist_T>;
-using Prev_List_T = unordered_map<Node_id_T, Node_id_T>;
-using Graph = unordered_map<Node_id_T, Dist_List_T>;
-
-vector<Node_id_T> neighbours(Graph& graph, Node_id_T cur);
+using VertexProp = boost::property<boost::vertex_name_t, Node_id_T>;
+using EdgeProp = boost::property<boost::edge_weight_t, Dist_T>;
+using Edge = pair<Node_id_T, Node_id_T>;
+using Dist_List_T = vector<Dist_T>;
+using Prev_List_T = vector<Node_id_T>;
+using Graph = boost::adjacency_list <boost::vecS, boost::vecS, boost::directedS, VertexProp, EdgeProp>;
 
 int subtree_size(Node_id_T node, unordered_map<Node_id_T, unordered_set<Node_id_T>> forest);
 
-Graph random_graph(long N, int max_weight, long edges, int seed);
+Graph random_graph(long long N, int max_weight, long long edges_count, int seed);
 
 pair<Graph, int> constant_degree_transformation(Graph G, int N);
 

@@ -15,15 +15,11 @@ struct Node {
 };
 
 pair<Dist_List_T, Prev_List_T> min_heap_dijkstra(Graph& graph, Node_id_T src, int N) {
-    Dist_List_T dist;
-    Prev_List_T parent;
+    Dist_List_T dist(N, INF);
+    Prev_List_T parent(N, -1);
     unordered_map<Node_id_T, bool> visited;
 
     priority_queue<Node> min_heap;
-    for (int i = 0; i < N; i++) {
-        dist[i] = INF;
-        parent[i] = -1;
-    }
     dist[src] = 0;
     min_heap.push(Node{src, dist[src]});
 
@@ -35,9 +31,11 @@ pair<Dist_List_T, Prev_List_T> min_heap_dijkstra(Graph& graph, Node_id_T src, in
         }
         visited[cur.name] = true;
 
-        vector<Node_id_T> neis = neighbours(graph, cur.name);
-        for (Node_id_T nei : neis) {
-            Dist_T temp = cur.distance + graph[cur.name][nei];
+        auto outs = boost::out_edges(cur.name, graph);
+        auto ei = outs.first; auto ei_end = outs.second;
+        for (; ei != ei_end; ++ei) {
+            Node_id_T nei = boost::target(*ei, graph);
+            Dist_T temp = cur.distance + boost::get(boost::edge_weight, graph, *ei);
 
             if (!visited[nei] && temp < dist[nei]) {
                 parent[nei] = cur.name;
@@ -57,13 +55,9 @@ pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, i
     using Heap = boost::heap::fibonacci_heap<Node>;
     using Handle = Heap::handle_type;
 
-    Dist_List_T dist;
-    Prev_List_T parent;
+    Dist_List_T dist(N, INF);
+    Prev_List_T parent(N, -1);
     unordered_map<Node_id_T, bool> visited;
-    for (int i = 0; i < N; i++) {
-        dist[i] = INF;
-        parent[i] = -1;
-    }
     dist[src] = 0;
 
     Heap H;
@@ -78,9 +72,11 @@ pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, i
         }
         visited[cur.name] = true;
 
-        vector<Node_id_T> neis = neighbours(graph, cur.name);
-        for (Node_id_T nei : neis) {
-            Dist_T temp = cur.distance + graph[cur.name][nei];
+        auto outs = boost::out_edges(cur.name, graph);
+        auto ei = outs.first; auto ei_end = outs.second;
+        for (; ei != ei_end; ++ei) {
+            Node_id_T nei = boost::target(*ei, graph);
+            Dist_T temp = cur.distance + boost::get(boost::edge_weight, graph, *ei);
 
             if (!visited[nei] && temp < dist[nei]) {
                 parent[nei] = cur.name;
@@ -94,5 +90,14 @@ pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, i
         }
     }
 
+    return {dist, parent};
+}
+
+#include <boost/graph/dijkstra_shortest_paths.hpp>
+
+pair<Dist_List_T, Prev_List_T> boost_dijkstra(Graph& graph, Node_id_T src, int N) {
+    Dist_List_T dist(N, INF);
+    Prev_List_T parent(N, -1);
+    boost::dijkstra_shortest_paths(graph, src, boost::distance_map(&dist[0]).predecessor_map(&parent[0]));
     return {dist, parent};
 }

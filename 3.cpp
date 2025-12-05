@@ -64,14 +64,8 @@ struct Path_T {
 Graph graph_;
 unordered_map<Node_id_T, Path_T> paths;
 
-void relax_an_edge(Node_id_T u, Node_id_T v) {
-    paths[v].length = paths[u].length + graph_[u][v];
-    paths[v].alpha = paths[u].alpha + 1;
-    paths[v].parent = paths[u].node;
-}
-
-Path_T temp_Path(Node_id_T u, Node_id_T v) {
-    return Path_T(paths[u].length + graph_[u][v], paths[u].alpha + 1, v, u);
+Path_T temp_Path(Node_id_T u, Node_id_T v, Dist_T w) {
+    return {paths[u].length + w, paths[u].alpha + 1, v, u};
 }
 
 pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(int k, Path_T B, vector<Node_id_T> S) {
@@ -95,16 +89,19 @@ pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(int k, Path_T B, vecto
         if (visited[u]) {
             continue;
         }
-        // TODO add break condition on k
+        // TODO add break condition on k ?
 
         visited[u] = true;
         U0.push_back(u);
 
-        vector<Node_id_T> neis = neighbours(graph_, u);
-        for (auto v : neis) {
-            Path_T temp = temp_Path(u, v);
+        auto outs = boost::out_edges(u, graph_);
+        auto ei = outs.first; auto ei_end = outs.second;
+        for (; ei != ei_end; ++ei) {
+            Node_id_T v = boost::target(*ei, graph_);
+            Dist_T w = boost::get(boost::edge_weight, graph_, *ei);
+            Path_T temp = temp_Path(u, v, w);
             if (temp <= paths[v] && temp < B) {
-                relax_an_edge(u, v);
+                paths[v] = temp;
                 if (handles[v].node_) {
                     H.update(handles[v], paths[v]);
                 }else {
@@ -134,11 +131,14 @@ pair<unordered_set<Node_id_T>, unordered_set<Node_id_T>> find_pivots(int k, Path
     for (int i = 1; i<= k; i++) {
         unordered_set<Node_id_T> Wi;
         for (Node_id_T u : Wi_1) {
-            vector<Node_id_T> neis = neighbours(graph_, u); // TODO: optimize this
-            for (Node_id_T v : neis) {
-                Path_T temp = temp_Path(u, v);
+            auto outs = boost::out_edges(u, graph_);
+            auto ei = outs.first; auto ei_end = outs.second;
+            for (; ei != ei_end; ++ei) {
+                Node_id_T v = boost::target(*ei, graph_);
+                Dist_T w = boost::get(boost::edge_weight, graph_, *ei);
+                Path_T temp = temp_Path(u, v, w);
                 if (temp <= paths[v]) {
-                    relax_an_edge(u, v);
+                    paths[v] = temp;
                     if (temp < B) {
                         Wi.insert(v);
                     }
@@ -153,8 +153,9 @@ pair<unordered_set<Node_id_T>, unordered_set<Node_id_T>> find_pivots(int k, Path
         Wi_1.swap(Wi);
     }
 
+    // TODO check boost unordered_map wich is faster an other alternatives
     unordered_map<Node_id_T, unordered_set<Node_id_T>> F;
-    Dist_List_T in_degree;
+    unordered_map<Node_id_T, int> in_degree;
     unordered_map<Node_id_T, bool> inW;
 
     for (Node_id_T u : W) {
@@ -164,9 +165,12 @@ pair<unordered_set<Node_id_T>, unordered_set<Node_id_T>> find_pivots(int k, Path
     }
 
     for (Node_id_T u : W) {
-        vector<Node_id_T> neis = neighbours(graph_, u);
-        for (Node_id_T v : neis) {
-            Path_T temp = temp_Path(u, v);
+        auto outs = boost::out_edges(u, graph_);
+        auto ei = outs.first; auto ei_end = outs.second;
+        for (; ei != ei_end; ++ei) {
+            Node_id_T v = boost::target(*ei, graph_);
+            Dist_T w = boost::get(boost::edge_weight, graph_, *ei);
+            Path_T temp = temp_Path(u, v, w);
             if (inW[v] && paths[v] == temp) {
                 F[u].insert(v);
                 in_degree[v]++;
@@ -221,11 +225,14 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
             if (D.contains(u)) {
                 D.delete_pair({u, paths[u]});
             }
-            vector<Node_id_T> neis = neighbours(graph_, u);
-            for (Node_id_T v : neis) {
-                Path_T temp = temp_Path(u, v);
+            auto outs = boost::out_edges(u, graph_);
+            auto ei = outs.first; auto ei_end = outs.second;
+            for (; ei != ei_end; ++ei) {
+                Node_id_T v = boost::target(*ei, graph_);
+                Dist_T w = boost::get(boost::edge_weight, graph_, *ei);
+                Path_T temp = temp_Path(u, v, w);
                 if (temp <= paths[v]) {
-                    relax_an_edge(u, v);
+                    paths[v] = temp;
                     if (Bi <= temp && temp < B) {
                         D.insert_pair({v, temp});
                     } else if (B_prime <= temp && temp < Bi) {
@@ -254,14 +261,15 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
 
 pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
     graph_ = g;
-    for (int i = 0; i < N; i++) {
+    int cd_N = boost::num_vertices(graph_);
+    for (int i = 0; i < cd_N; i++) {
         paths[i] = Path_T();
         paths[i].node = i;
     }
     paths[src].length = 0;
 
     Path_T B(INF);
-    double log_n = log2(N);
+    double log_n = log2(cd_N);
     int k = static_cast<int>(floor(pow(log_n, 1.0/3.0))); // work per iteration
     int t = static_cast<int>(floor(pow(log_n, 2.0/3.0)));
 
@@ -270,12 +278,12 @@ pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
 
     auto res = BMSSP(t, k, l, B, S);
 
-    Dist_List_T dist;
-    Prev_List_T pred;
+    Dist_List_T dist(N, INF);
+    Prev_List_T parent(N, -1);
     for (int x = 0; x < N; x++) {
         dist[x] = paths[x].length;
-        pred[x] = paths[x].parent;
+        parent[x] = paths[x].parent;
     }
 
-    return {dist, pred};
+    return {dist, parent};
 }
