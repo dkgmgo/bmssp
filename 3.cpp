@@ -5,7 +5,6 @@
 #include "3.hpp"
 
 #include <cassert>
-#include <unordered_map>
 #include <unordered_set>
 #include <boost/heap/fibonacci_heap.hpp>
 
@@ -31,6 +30,13 @@ struct Path_T {
         node = INF;
     }
 
+    Path_T(const Dist_T ub, const Node_id_T n) {
+        length = ub;
+        alpha = 0;
+        parent = -1;
+        node = n;
+    }
+
     Path_T(Dist_T l, int a, Node_id_T n, Node_id_T p) {
         length = l;
         alpha = a;
@@ -39,12 +45,16 @@ struct Path_T {
     }
 
     bool operator==(const Path_T& other) const {
-        return tie(length, alpha, node)
-             == tie(other.length, other.alpha, other.node);
+        return length == other.length && alpha == other.alpha && node == other.node;
     }
     bool operator<(const Path_T& other) const {
-        return tie(length, alpha, node)
-             < tie(other.length, other.alpha, other.node);
+        if (length != other.length) {
+            return length < other.length;
+        }
+        if (alpha != other.alpha) {
+            return alpha < other.alpha;
+        }
+        return node < other.node;
     }
     bool operator!=(const Path_T& other) const { return !(*this == other); }
     bool operator>(const Path_T& other)  const { return other < *this; }
@@ -62,36 +72,49 @@ struct Path_T {
 };
 
 Graph graph_;
-unordered_map<Node_id_T, Path_T> paths;
+vector<Path_T> paths;
+vector<unordered_set<Node_id_T>> forest;
+vector<int> in_degree;
 
 Path_T temp_Path(Node_id_T u, Node_id_T v, Dist_T w) {
     return {paths[u].length + w, paths[u].alpha + 1, v, u};
 }
 
+//TODO cache this
+int subtree_size_helper(Node_id_T node, unordered_set<Node_id_T> &visited) {
+    if (visited.count(node)) {
+        return 0;
+    }
+    visited.insert(node);
+    int size = 1;
+    for (const Node_id_T &v: forest[node]) {
+        size += subtree_size_helper(v, visited);
+    }
+    return size;
+}
+
+int subtree_size(Node_id_T node) {
+    unordered_set<Node_id_T> visited;
+    return subtree_size_helper(node, visited);
+}
+
 pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(int k, Path_T B, vector<Node_id_T> S) {
     assert(S.size() == 1);
 
-    Node_id_T s0 = S[0];
-    using Heap = boost::heap::fibonacci_heap<Path_T, boost::heap::compare<greater<>>>;
-    using Handle = Heap::handle_type;
+    priority_queue<Path_T, vector<Path_T>, greater<>> min_heap;
+    min_heap.push(paths[S[0]]);
 
     vector<Node_id_T> U0;
-    Heap H;
-    unordered_map<Node_id_T, Handle> handles;
-    handles[s0] = H.push(paths[s0]);
-    unordered_map<Node_id_T, bool> visited;
 
-    while (!H.empty() && static_cast<int>(U0.size()) < k+1) {
-        auto cur = H.top();
-        H.pop();
+    while (!min_heap.empty() && static_cast<int>(U0.size()) < k+1) {
+        auto cur = min_heap.top();
+        min_heap.pop();
         Node_id_T u = cur.node;
 
-        if (visited[u]) {
+        if (paths[u] > cur) {
             continue;
         }
         // TODO add break condition on k ?
-
-        visited[u] = true;
         U0.push_back(u);
 
         auto outs = boost::out_edges(u, graph_);
@@ -102,11 +125,7 @@ pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(int k, Path_T B, vecto
             Path_T temp = temp_Path(u, v, w);
             if (temp <= paths[v] && temp < B) {
                 paths[v] = temp;
-                if (handles[v].node_) {
-                    H.update(handles[v], paths[v]);
-                }else {
-                    handles[v] = H.push(paths[v]);
-                }
+                min_heap.push(temp);
             }
         }
     }
@@ -128,9 +147,14 @@ pair<unordered_set<Node_id_T>, unordered_set<Node_id_T>> find_pivots(int k, Path
     unordered_set<Node_id_T> Wi_1(S.begin(), S.end()); // W_0
     unordered_set<Node_id_T> P;
 
+    for (const Node_id_T &u : S) {
+        in_degree[u] = 0;
+        forest[u] = unordered_set<Node_id_T>();
+    }
+
     for (int i = 1; i<= k; i++) {
         unordered_set<Node_id_T> Wi;
-        for (Node_id_T u : Wi_1) {
+        for (const Node_id_T &u : Wi_1) {
             auto outs = boost::out_edges(u, graph_);
             auto ei = outs.first; auto ei_end = outs.second;
             for (; ei != ei_end; ++ei) {
@@ -153,33 +177,22 @@ pair<unordered_set<Node_id_T>, unordered_set<Node_id_T>> find_pivots(int k, Path
         Wi_1.swap(Wi);
     }
 
-    // TODO check boost unordered_map wich is faster an other alternatives
-    unordered_map<Node_id_T, unordered_set<Node_id_T>> F;
-    unordered_map<Node_id_T, int> in_degree;
-    unordered_map<Node_id_T, bool> inW;
-
-    for (Node_id_T u : W) {
-        in_degree[u] = 0;
-        inW[u] = true;
-        F[u] = unordered_set<Node_id_T>();
-    }
-
-    for (Node_id_T u : W) {
+    for (const Node_id_T &u : W) {
         auto outs = boost::out_edges(u, graph_);
         auto ei = outs.first; auto ei_end = outs.second;
         for (; ei != ei_end; ++ei) {
             Node_id_T v = boost::target(*ei, graph_);
             Dist_T w = boost::get(boost::edge_weight, graph_, *ei);
             Path_T temp = temp_Path(u, v, w);
-            if (inW[v] && paths[v] == temp) {
-                F[u].insert(v);
+            if (W.count(v) && paths[v] == temp) {
+                forest[u].insert(v);
                 in_degree[v]++;
             }
         }
     }
 
-    for (Node_id_T u : S) {
-        if (in_degree[u] == 0 && subtree_size(u, F) >= k) {
+    for (const Node_id_T &u : S) {
+        if (in_degree[u] == 0 && subtree_size(u) >= k) {
             P.insert(u);
         }
     }
@@ -202,7 +215,7 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
     BBL_DS<Node_id_T, Path_T> D;
     D.initialize(M, B);
     Path_T B_prime = B;
-    for (Node_id_T x : P) {
+    for (const Node_id_T &x : P) {
         D.insert_pair({x, paths[x]});
         B_prime = min(B_prime, paths[x]);
     }
@@ -221,7 +234,7 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
         assert(prev_B_prime <= B_prime);
 
         vector<pair<Node_id_T, Path_T>> K;
-        for (Node_id_T u : bmssp.second) {
+        for (const Node_id_T &u : bmssp.second) {
             if (D.contains(u)) {
                 D.delete_pair({u, paths[u]});
             }
@@ -241,7 +254,7 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
                 }
             }
         }
-        for (Node_id_T x : Si) {
+        for (const Node_id_T &x : Si) {
             if (B_prime <= paths[x] && paths[x] < Bi) {
                 K.push_back({x, paths[x]});
             }
@@ -250,7 +263,7 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
     }
 
     B_prime = min(B_prime, B);
-    for (Node_id_T x : W) {
+    for (const Node_id_T &x : W) {
         if (paths[x] < B_prime) {
             U.insert(x);
         }
@@ -262,13 +275,15 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
 pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
     graph_ = g;
     int cd_N = boost::num_vertices(graph_);
+    in_degree.resize(cd_N);
+    forest.resize(cd_N);
+    paths.reserve(cd_N);
     for (int i = 0; i < cd_N; i++) {
-        paths[i] = Path_T();
-        paths[i].node = i;
+        paths.emplace_back(INF, i);
     }
     paths[src].length = 0;
 
-    Path_T B(INF);
+    Path_T B{};
     double log_n = log2(cd_N);
     int k = static_cast<int>(floor(pow(log_n, 1.0/3.0))); // work per iteration
     int t = static_cast<int>(floor(pow(log_n, 2.0/3.0)));
@@ -278,11 +293,11 @@ pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
 
     auto res = BMSSP(t, k, l, B, S);
 
-    Dist_List_T dist(N, INF);
-    Prev_List_T parent(N, -1);
+    Dist_List_T dist; dist.reserve(N);
+    Prev_List_T parent; dist.reserve(N);
     for (int x = 0; x < N; x++) {
-        dist[x] = paths[x].length;
-        parent[x] = paths[x].parent;
+        dist.emplace_back(paths[x].length);
+        parent.emplace_back(paths[x].parent);
     }
 
     return {dist, parent};

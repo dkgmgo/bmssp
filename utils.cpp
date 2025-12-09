@@ -1,23 +1,5 @@
 #include "utils.hpp"
 
-//TODO cache this
-int subtree_size_helper(Node_id_T node, unordered_map<Node_id_T, unordered_set<Node_id_T>> &forest, unordered_set<Node_id_T> &visited) {
-    if (visited.count(node)) {
-        return 0;
-    }
-    visited.insert(node);
-    int size = 1;
-    for (Node_id_T v: forest[node]) {
-        size += subtree_size_helper(v, forest, visited);
-    }
-    return size;
-}
-
-int subtree_size(Node_id_T node, unordered_map<Node_id_T, unordered_set<Node_id_T>> forest) {
-    unordered_set<Node_id_T> visited;
-    return subtree_size_helper(node, forest, visited);
-}
-
 inline uint64_t encode_edge(int u, int v) {
     return uint64_t(u) << 32 | uint64_t(v);
 }

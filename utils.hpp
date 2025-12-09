@@ -25,8 +25,6 @@ using Dist_List_T = vector<Dist_T>;
 using Prev_List_T = vector<Node_id_T>;
 using Graph = boost::adjacency_list <boost::vecS, boost::vecS, boost::directedS, VertexProp, EdgeProp>;
 
-int subtree_size(Node_id_T node, unordered_map<Node_id_T, unordered_set<Node_id_T>> forest);
-
 Graph random_graph(long long N, int max_weight, long long edges_count, int seed);
 
 pair<Graph, int> constant_degree_transformation(Graph G, int N);
