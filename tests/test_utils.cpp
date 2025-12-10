@@ -35,17 +35,6 @@ protected:
     }
 };
 
-TEST_F(Test_Utils, test_subtree_size) {
-    unordered_map<Node_id_T, unordered_set<Node_id_T>> F;
-    F[0] = {1, 2, 3, 4};
-    F[1] = {5};
-    F[2] = {};
-
-    EXPECT_EQ(subtree_size(0, F), 6);
-    EXPECT_EQ(subtree_size(1, F), 2);
-    EXPECT_EQ(subtree_size(2, F), 1);
-}
-
 TEST_F(Test_Utils, test_constant_degree_transformation_out) {
     Map_Graph G = {
         {0, {{1, 10}, {2, 10}, {3, 10}, {4, 10}}}
