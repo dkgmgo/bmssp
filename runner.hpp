@@ -139,17 +139,17 @@ struct Runner {
                 string line;
                 auto res = run_test(boost_dijkstra);
                 line += "\n Boost_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+                double boost_time = res.first;
                 res = run_test(min_heap_dijkstra);
                 line += "\n Min_heap_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
                 res = run_test(fibo_heap_dijkstra);
                 line += "\n Fibo_heap_dijkstra:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                double fibo_time = res.first;
                 res = run_test(top_level_BMSSP);
                 line += "\n BMSSP_no_cd:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                line += "\n BMSSP_no_cd_time/Fibo_heap_dijkstra_time = " + to_string(res.first/fibo_time);
+                line += "\n BMSSP_no_cd_time/Boost_dijkstra_time = " + to_string(res.first/boost_time);
                 res = run_test(top_level_BMSSP, true);
                 line += "\n BMSSP:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                line += "\n BMSSP_time/Fibo_heap_dijkstra_time = " + to_string(res.first/fibo_time) + "\n";
+                line += "\n BMSSP_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
                 file << "\nN: " << i << " M: "<< j << " Results: "<< line;
             }
         }

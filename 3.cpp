@@ -71,6 +71,13 @@ struct Path_T {
     }
 };
 
+/*struct BMSSP_State {
+    Graph graph;
+    vector<Path_T> paths;
+    vector<unordered_set<Node_id_T>> forest;
+    vector<int> in_degree;
+};*/
+
 Graph graph_;
 vector<Path_T> paths;
 vector<unordered_set<Node_id_T>> forest;
@@ -275,8 +282,9 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(int t, int k, int l, Path_T B, vect
 pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
     graph_ = g;
     int cd_N = boost::num_vertices(graph_);
-    in_degree.resize(cd_N);
-    forest.resize(cd_N);
+    in_degree.assign(cd_N, 0);
+    forest.assign(cd_N, unordered_set<Node_id_T>());
+    paths.clear();
     paths.reserve(cd_N);
     for (int i = 0; i < cd_N; i++) {
         paths.emplace_back(INF, i);
@@ -294,7 +302,7 @@ pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
     auto res = BMSSP(t, k, l, B, S);
 
     Dist_List_T dist; dist.reserve(N);
-    Prev_List_T parent; dist.reserve(N);
+    Prev_List_T parent; parent.reserve(N);
     for (int x = 0; x < N; x++) {
         dist.emplace_back(paths[x].length);
         parent.emplace_back(paths[x].parent);
