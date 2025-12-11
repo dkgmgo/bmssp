@@ -175,8 +175,8 @@ private:
         });
         Value median_val = L[mid].second;
         Key median_key = L[mid].first;
-        vector<Item> left_block;
-        vector<Item> right_block;
+        vector<Item> left_block; left_block.reserve(mid+1);
+        vector<Item> right_block; right_block.reserve(mid+2);
         for (const auto &p : L) {
             if (p.second < median_val) {
                 left_block.push_back(p);
@@ -198,8 +198,9 @@ private:
     }
 
     vector<vector<Item>> blocks_content_by_median(vector<Item> &L, int block_size) {
-        vector<vector<Item>> sortie;
-        if (block_size >= static_cast<int>(L.size())) {
+        int l_size = static_cast<int>(L.size());
+        vector<vector<Item>> sortie; sortie.reserve(l_size/block_size + 1);
+        if (block_size >= l_size) {
             sortie.push_back(L);
         }else {
             blocks_content_by_median_helper(sortie, L, block_size);
@@ -327,7 +328,7 @@ public:
         }
 
         // handle duplicates and existing
-        vector<Item> cleaned_L;
+        vector<Item> cleaned_L; cleaned_L.reserve(L.size());
         unordered_set<Key> seen_keys;
         unordered_map<Key, typename vector<Item>::iterator> inserted;
         for (const auto p: L) {
@@ -349,7 +350,7 @@ public:
                     continue;
                 }
             }
-            cleaned_L.push_back(p);
+            cleaned_L.emplace_back(p);
             seen_keys.insert(p.first);
             inserted[p.first] = prev(cleaned_L.end());
         }

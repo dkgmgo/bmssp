@@ -166,7 +166,7 @@ pair<unordered_set<Node_id_T>, unordered_set<Node_id_T>> find_pivots(BMSSP_State
 
     for (const Node_id_T &u : S) {
         state.in_degree[u] = 0;
-        state.forest[u] = unordered_set<Node_id_T>();
+        state.forest[u].clear();
     }
 
     for (int i = 1; i<= k; i++) {
