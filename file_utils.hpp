@@ -99,23 +99,28 @@ public:
             throw runtime_error("Error reading GraphML: " + string(e.what()));
         }
 
-        Graph adjacencyMap;
+        Graph sortie;
         for (auto e : boost::make_iterator_range(boost::edges(g))) {
             Node_id_T src = boost::source(e, g);
             Node_id_T dest = boost::target(e, g);
             Dist_T weight = Info::get_edge_weight(g[e]);
 
-            adjacencyMap[src][dest] = weight;
-            adjacencyMap[dest][src] = weight; //it's undirected
+            boost::add_edge(src, dest, weight, sortie);
+            boost::add_edge(dest, src, weight, sortie); //it's undirected
         }
 
         if (verbose) cout << "Graph read successfully" << endl;
 
-        return {adjacencyMap, num_vertices(g)};
+        return {sortie, num_vertices(sortie)};
     }
 
     static pair<Graph, int> read_bgp_graphml(const string &filename, bool verbose=true) {
         return read_graphml<BGP_Info>(filename, verbose);
+    }
+
+    static void export_to_dot(const string &filename, const Graph& g) {
+        ofstream file(filename);
+        boost::write_graphviz(file, g, boost::default_writer(), boost::make_label_writer(boost::get(boost::edge_weight, g)));
     }
 };
 

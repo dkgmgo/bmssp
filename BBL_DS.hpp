@@ -7,6 +7,7 @@
 
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <sstream>
 #define INF 10000000
@@ -45,7 +46,7 @@ struct Block {
 
     Value min_value() {
         auto sortie = items.front();
-        for (auto p : items) {
+        for (const auto &p : items) {
             if (p.second < sortie.second) {
                 sortie = p;
             }
@@ -126,7 +127,7 @@ private:
 
     void block_batch_insert(vector<Item> &L, BlockIt block_it, bool update_ub=false) {
         Value ub = Value(-1*INF);
-        for (auto &p : L) {
+        for (const auto &p : L) {
             ItemIt item_it = block_it->insert(p);
             keymap[p.first] = {block_it, item_it};
             ub = max(ub, p.second);
@@ -174,9 +175,9 @@ private:
         });
         Value median_val = L[mid].second;
         Key median_key = L[mid].first;
-        vector<Item> left_block;
-        vector<Item> right_block;
-        for (auto &p : L) {
+        vector<Item> left_block; left_block.reserve(mid+1);
+        vector<Item> right_block; right_block.reserve(mid+2);
+        for (const auto &p : L) {
             if (p.second < median_val) {
                 left_block.push_back(p);
             } else {
@@ -197,8 +198,9 @@ private:
     }
 
     vector<vector<Item>> blocks_content_by_median(vector<Item> &L, int block_size) {
-        vector<vector<Item>> sortie;
-        if (block_size >= static_cast<int>(L.size())) {
+        int l_size = static_cast<int>(L.size());
+        vector<vector<Item>> sortie; sortie.reserve(l_size/block_size + 1);
+        if (block_size >= l_size) {
             sortie.push_back(L);
         }else {
             blocks_content_by_median_helper(sortie, L, block_size);
@@ -229,7 +231,7 @@ private:
         int cpt = 0;
         auto block_it = sequence.begin();
         while (block_it != sequence.end() && cpt < M) {
-            for (auto &p : block_it->items) {
+            for (const auto &p : block_it->items) {
                 buffer.push_back(p);
                 cpt++;
             }
@@ -248,7 +250,7 @@ private:
 
     BlockIt get_D0_block_position(vector<Item> block_content) {
         Item maxi = block_content.front();
-        for (auto &p : block_content) {
+        for (const auto &p : block_content) {
             if (maxi.second < p.second) {
                 maxi = p;
             }
@@ -265,15 +267,6 @@ private:
         ostringstream oss;
         oss << v;
         return oss.str();
-    }
-
-    typename vector<Item>::iterator find_key_in_seq(Key key, vector<Item> &seq) {
-        for (auto it = seq.begin(); it != seq.end(); ++it) {
-            if (it->first == key) {
-                return it;
-            }
-        }
-        return seq.end();
     }
 
 public:
@@ -335,10 +328,12 @@ public:
         }
 
         // handle duplicates and existing
-        vector<Item> cleaned_L;
-        for (auto p: L) {
-            auto it_v = find_key_in_seq(p.first, cleaned_L);
-            if (it_v != cleaned_L.end()) {
+        vector<Item> cleaned_L; cleaned_L.reserve(L.size());
+        unordered_set<Key> seen_keys;
+        unordered_map<Key, typename vector<Item>::iterator> inserted;
+        for (const auto p: L) {
+            if (seen_keys.count(p.first)) {
+                auto it_v = inserted[p.first];
                 if (p.second < it_v->second) {
                     cleaned_L.erase(it_v);
                 }else {
@@ -355,7 +350,9 @@ public:
                     continue;
                 }
             }
-            cleaned_L.push_back(p);
+            cleaned_L.emplace_back(p);
+            seen_keys.insert(p.first);
+            inserted[p.first] = prev(cleaned_L.end());
         }
 
         bool just_push_all = is_block_sequence_empty(D0);
@@ -389,7 +386,7 @@ public:
         int n = static_cast<int>(buffer.size());
 
         if (n <= M) {
-            for (auto &p : buffer) {
+            for (const auto &p : buffer) {
                 delete_pair(p);
                 keys.push_back(p.first);
             }

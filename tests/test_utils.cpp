@@ -7,38 +7,49 @@ class Test_Utils : public ::testing::Test {
 protected:
     void SetUp() override {
     }
+
+    using Map_Graph = unordered_map<Node_id_T, unordered_map<Node_id_T, Dist_T>>;
+
+    Map_Graph boost_to_map(const Graph& G) {
+        Map_Graph sortie;
+        auto weights = boost::get(boost::edge_weight, G);
+        auto edges = boost::edges(G);
+        auto ei = edges.first; auto ei_end = edges.second;
+        for (; ei != ei_end; ++ei) {
+            Node_id_T u = boost::source(*ei, G);
+            Node_id_T v = boost::target(*ei, G);
+            sortie[u][v] = weights[*ei];
+        }
+
+        return sortie;
+    }
+
+    Graph map_to_boost(const Map_Graph& G) {
+        Graph sortie;
+        for (const auto& [u, edges]: G) {
+            for (const auto& [v, w]: edges) {
+                boost::add_edge(u, v, w, sortie);
+            }
+        }
+        return sortie;
+    }
 };
 
-TEST_F(Test_Utils, test_neighbours) {
-    Graph G = {
-        {0, {{1, 10}, {2, 10}, {3, 10}, {4, 10}}}
-    };
-
-    auto res = neighbours(G, 0);
-    EXPECT_EQ(res.size(), 4);
-    EXPECT_TRUE(count(res.begin(), res.end(), 1) &&
-        count(res.begin(), res.end(), 2) &&
-        count(res.begin(), res.end(), 3) &&
-        count(res.begin(), res.end(), 4));
-}
-
-TEST_F(Test_Utils, test_subtree_size) {
-    unordered_map<Node_id_T, unordered_set<Node_id_T>> F;
-    F[0] = {1, 2, 3, 4};
-    F[1] = {5};
-    F[2] = {};
-
-    EXPECT_EQ(subtree_size(0, F), 6);
-    EXPECT_EQ(subtree_size(1, F), 2);
-    EXPECT_EQ(subtree_size(2, F), 1);
+TEST_F(Test_Utils, test_unit_weigths_generation) {
+    Map_Graph G = boost_to_map(random_graph_with_unit_weights(5, 12, 123));
+    for (const auto &p : G) {
+        for (const auto &q : p.second) {
+            EXPECT_EQ(q.second, 1);
+        }
+    }
 }
 
 TEST_F(Test_Utils, test_constant_degree_transformation_out) {
-    Graph G = {
+    Map_Graph G = {
         {0, {{1, 10}, {2, 10}, {3, 10}, {4, 10}}}
     };
-    auto res = constant_degree_transformation(G, 5);
-    Graph G_prime = res.first;
+    auto res = constant_degree_transformation(map_to_boost(G), 5);
+    Map_Graph G_prime = boost_to_map(res.first);
 
     EXPECT_EQ(G_prime.size(), 4);
     EXPECT_EQ(res.second, 8);
@@ -52,14 +63,14 @@ TEST_F(Test_Utils, test_constant_degree_transformation_out) {
 }
 
 TEST_F(Test_Utils, test_constant_degree_transformation_in) {
-    Graph G = {
+    Map_Graph G = {
         {1, {{0, 10}}},
         {2, {{0, 10}}},
         {3, {{0, 10}}},
         {4, {{0, 10}}}
     };
-    auto res = constant_degree_transformation(G, 5);
-    Graph G_prime = res.first;
+    auto res = constant_degree_transformation(map_to_boost(G), 5);
+    Map_Graph G_prime = boost_to_map(res.first);
 
     EXPECT_EQ(G_prime.size(), 8);
     EXPECT_EQ(res.second, 8);
@@ -74,15 +85,15 @@ TEST_F(Test_Utils, test_constant_degree_transformation_in) {
 }
 
 TEST_F(Test_Utils, test_constant_degree_transformation_both) {
-    Graph G = {
+    Map_Graph G = {
         {0, {{1, 10}, {2, 10}, {3, 10}, {4, 10}}},
         {2, {{1, 10}}},
         {3, {{1, 10}}},
         {1, {{5, 10}, {6, 10}, {7, 10}}},
         {4, {{0, 10}}}
     };
-    auto res = constant_degree_transformation(G, 8);
-    Graph G_prime = res.first;
+    auto res = constant_degree_transformation(map_to_boost(G), 8);
+    Map_Graph G_prime = boost_to_map(res.first);
 
     EXPECT_EQ(res.second, 17);
     EXPECT_EQ(G_prime.size(), 14);
@@ -95,13 +106,13 @@ TEST_F(Test_Utils, test_constant_degree_transformation_both) {
 }
 
 TEST_F(Test_Utils, test_constant_degree_transformation_already_cd) {
-    Graph G = {
+    Map_Graph G = {
         {0, {{1, 10}, {2, 10}}},
         {3, {{0, 10}}},
         {1, {{3, 10}, {2, 10}}}
     };
-    auto res = constant_degree_transformation(G, 4);
-    Graph G_prime = res.first;
+    auto res = constant_degree_transformation(map_to_boost(G), 4);
+    Map_Graph G_prime = boost_to_map(res.first);
 
     EXPECT_EQ(res.second, 4);
     EXPECT_EQ(G_prime.size(), 3);
@@ -110,13 +121,13 @@ TEST_F(Test_Utils, test_constant_degree_transformation_already_cd) {
 }
 
 TEST_F(Test_Utils, test_constant_degree_transformation_2ins_3_outs) {
-    Graph G = {
+    Map_Graph G = {
         {0, {{1, 10}, {2, 10}, {3, 10}}},
         {2, {{0, 10}}},
         {3, {{0, 10}}}
     };
-    auto res = constant_degree_transformation(G, 4);
-    Graph G_prime = res.first;
+    auto res = constant_degree_transformation(map_to_boost(G), 4);
+    Map_Graph G_prime = boost_to_map(res.first);
 
     EXPECT_EQ(G_prime.size(), 7);
     EXPECT_EQ(res.second, 8);
