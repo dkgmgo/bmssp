@@ -51,6 +51,10 @@ Graph random_graph(long long N, int max_weight, long long edges_count, int seed)
     return Graph(edges.begin(), edges.end(), weights.begin(), N);
 }
 
+Graph random_graph_with_unit_weights(long long N, long long edges_count, int seed) {
+    return random_graph(N, 1, edges_count, seed);
+}
+
 pair<Graph, int> constant_degree_transformation(Graph G, int N) {
     Graph G_prime;
     unordered_map<Node_id_T, string> id_to_name;

@@ -35,6 +35,15 @@ protected:
     }
 };
 
+TEST_F(Test_Utils, test_unit_weigths_generation) {
+    Map_Graph G = boost_to_map(random_graph_with_unit_weights(5, 12, 123));
+    for (const auto &p : G) {
+        for (const auto &q : p.second) {
+            EXPECT_EQ(q.second, 1);
+        }
+    }
+}
+
 TEST_F(Test_Utils, test_constant_degree_transformation_out) {
     Map_Graph G = {
         {0, {{1, 10}, {2, 10}, {3, 10}, {4, 10}}}

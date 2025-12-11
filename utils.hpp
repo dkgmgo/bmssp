@@ -27,6 +27,8 @@ using Graph = boost::adjacency_list <boost::vecS, boost::vecS, boost::directedS,
 
 Graph random_graph(long long N, int max_weight, long long edges_count, int seed);
 
+Graph random_graph_with_unit_weights(long long N, long long edges_count, int seed);
+
 pair<Graph, int> constant_degree_transformation(Graph G, int N);
 
 #endif
