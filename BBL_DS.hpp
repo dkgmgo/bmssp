@@ -6,10 +6,10 @@
 #define DIJKSTRA_BBL_DS_HPP
 
 #include <list>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <sstream>
+#include <boost/unordered/unordered_flat_map.hpp>
 #define INF 10000000
 
 #include "RBT.hpp"
@@ -95,7 +95,7 @@ private:
     BlockSeq D1;  // Blocks from regular insertions (TODO: check deque or others)
     RBT<RBData<Key, Value>> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
 
-    unordered_map<Key, pair<BlockIt, ItemIt>> keymap; // for lookups
+    boost::unordered_flat_map<Key, pair<BlockIt, ItemIt>> keymap; // for lookups
 
 
     void register_block_in_RBT(BlockIt block_it) {
@@ -208,7 +208,7 @@ private:
         return sortie;
     }
 
-    void delete_pair_from_keymap_it(typename unordered_map<Key, pair<BlockIt, ItemIt>>::iterator it) {
+    void delete_pair_from_keymap_it(typename boost::unordered_flat_map<Key, pair<BlockIt, ItemIt>>::iterator it) {
         BlockIt block_it = it->second.first;
         ItemIt item_it = it->second.second;
 
@@ -330,7 +330,7 @@ public:
         // handle duplicates and existing
         vector<Item> cleaned_L; cleaned_L.reserve(L.size());
         unordered_set<Key> seen_keys;
-        unordered_map<Key, typename vector<Item>::iterator> inserted;
+        boost::unordered_flat_map<Key, typename vector<Item>::iterator> inserted;
         for (const auto p: L) {
             if (seen_keys.count(p.first)) {
                 auto it_v = inserted[p.first];
