@@ -75,7 +75,7 @@ struct Path_T {
 struct BMSSP_State {
     Graph *graph_ptr;
     vector<Path_T> paths;
-    vector<unordered_set<Node_id_T>> forest;
+    vector<vector<Node_id_T>> forest;
     vector<int> in_degree;
     int cd_N;
 
@@ -83,7 +83,7 @@ struct BMSSP_State {
         graph_ptr = &g;
         cd_N = boost::num_vertices(*graph_ptr);
         in_degree.assign(cd_N, 0);
-        forest.assign(cd_N, unordered_set<Node_id_T>());
+        forest.assign(cd_N, vector<Node_id_T>());
 
         paths.clear();
         paths.reserve(cd_N);
@@ -102,7 +102,7 @@ bool subtree_size_at_least_k(const BMSSP_State &state, Node_id_T node, int k)
 {
     unordered_set<Node_id_T> visited;
     vector<Node_id_T> stack;
-    //stack.reserve(32);
+    stack.reserve(32);
 
     int count = 0;
     stack.push_back(node);
@@ -173,10 +173,6 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
     int N = state.cd_N;
     boost::dynamic_bitset<> W(N), Wi_1(N), Wi(N), P(N);
 
-    //unordered_set<Node_id_T> W(S.begin(), S.end());
-    //unordered_set<Node_id_T> Wi_1(S.begin(), S.end()); // W_0
-    //unordered_set<Node_id_T> P;
-
     for (const Node_id_T &u : S) {
         W.set(u);
         Wi_1.set(u);
@@ -219,7 +215,7 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
             Dist_T w = boost::get(boost::edge_weight, *state.graph_ptr, *ei);
             Path_T temp = temp_Path(state, u, v, w);
             if (W.test(v) && state.paths[v] == temp) {
-                state.forest[u].insert(v);
+                state.forest[u].push_back(v);
                 state.in_degree[v]++;
             }
         }

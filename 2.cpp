@@ -61,7 +61,7 @@ pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, i
     dist[src] = 0;
 
     Heap H;
-    unordered_map<Node_id_T, Handle> handles(N);
+    vector<Handle> handles(N);
     handles[src] = H.push({src, dist[src]});
 
     while (!H.empty()) {
