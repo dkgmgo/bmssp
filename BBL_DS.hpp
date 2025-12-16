@@ -6,10 +6,10 @@
 #define DIJKSTRA_BBL_DS_HPP
 
 #include <list>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <sstream>
+#include <boost/unordered/unordered_flat_map.hpp>
 #define INF 10000000
 
 #include "RBT.hpp"
@@ -17,27 +17,26 @@
 template <typename Key, typename Value>
 struct Block {
     using Item = pair<Key, Value>;
-    using LinkedList = list<Item>;
+    using LinkedList = vector<Item>; // yeah I know it's not
     enum Location {UNK, D0, D1};
 
     LinkedList items;
     Value upper_bound{};
     Location location = UNK;
 
-
     Block() = default;
 
-    explicit Block(Value upper_bound) {
-        this->upper_bound = upper_bound;
+    explicit Block(int max_size) {
+        items.reserve(max_size);
     }
 
-    typename LinkedList::iterator insert(const Item &p) {
+    Block(Value ub, int max_size) : upper_bound(ub) {
+        items.reserve(max_size);
+    }
+
+    size_t insert(const Item &p) {
         items.push_back(p);
-        return prev(items.end());
-    }
-
-    void remove(typename LinkedList::iterator it) {
-        items.erase(it);
+        return items.size()-1;
     }
 
     bool empty() {
@@ -55,28 +54,6 @@ struct Block {
     }
 };
 
-template<typename Key, typename Value>
-struct RBData {
-    Value upper_bound;
-    Block<Key, Value> *block_ptr;
-
-    RBData(Value ub, Block<Key, Value> *block) {
-        this->upper_bound = ub;
-        this->block_ptr = block;
-    }
-
-    RBData(): upper_bound(), block_ptr(nullptr){}
-
-    bool operator<(const RBData &other) const {
-        return upper_bound < other.upper_bound;
-    }
-
-    friend ostream& operator<<(ostream& os, const RBData& data) {
-        os << data.upper_bound;
-        return os;
-    }
-};
-
 template <typename Key, typename Value>
 class BBL_DS {
 
@@ -85,51 +62,60 @@ class BBL_DS {
     using BlockSeq = list<BlockT>;
 
     using BlockIt = typename BlockSeq::iterator;
-    using ItemIt = typename BlockT::LinkedList::iterator;
 
+    struct RBData {
+        Value upper_bound;
+        BlockIt block_it;
+
+        RBData(Value ub, BlockIt it_block) {
+            this->upper_bound = ub;
+            this->block_it = it_block;
+        }
+
+        RBData() = default;
+
+        RBData(Value ub): upper_bound(ub), block_it(){}
+
+        bool operator<(const RBData &other) const {
+            return upper_bound < other.upper_bound;
+        }
+    };
 
 private:
     int M;
     Value B{};
     BlockSeq D0;  // Blocks from batch_prepend
     BlockSeq D1;  // Blocks from regular insertions (TODO: check deque or others)
-    RBT<RBData<Key, Value>> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
+    RBT<RBData> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
 
-    unordered_map<Key, pair<BlockIt, ItemIt>> keymap; // for lookups
+    boost::unordered_flat_map<Key, pair<BlockIt, size_t>> keymap; // for lookups
 
 
     void register_block_in_RBT(BlockIt block_it) {
-        RBData<Key, Value> data{block_it->upper_bound, &*block_it};
+        RBData data{block_it->upper_bound, block_it};
         rbtree_D1.insert(data);
     }
 
     void unregister_block_in_RBT(BlockIt block_it) {
-        RBData<Key, Value> data{block_it->upper_bound, &*block_it};
+        RBData data{block_it->upper_bound, block_it};
         rbtree_D1.remove(data);
     }
 
     BlockIt which_D1_block_for_value(Value value) {
-        RBData<Key, Value> data{value, nullptr};
+        RBData data{value};
         auto node = rbtree_D1.lower_bound(data);
         if (node == nullptr) {
             return D1.end();
         }
 
-        //conversion ptr to it
-        Block<Key, Value> *block_ptr = node->data.block_ptr;
-        for (auto it = D1.begin(); it != D1.end(); ++it) {
-            if (&*it == block_ptr) {
-                return it;
-            }
-        }
-        return D1.end();
+        return node->data.block_it;
     }
 
     void block_batch_insert(vector<Item> &L, BlockIt block_it, bool update_ub=false) {
         Value ub = Value(-1*INF);
         for (const auto &p : L) {
-            ItemIt item_it = block_it->insert(p);
-            keymap[p.first] = {block_it, item_it};
+            size_t idx = block_it->insert(p);
+            keymap[p.first] = {block_it, idx};
             ub = max(ub, p.second);
         }
         if (update_ub) {
@@ -138,14 +124,13 @@ private:
     }
 
     void split_D1_block(BlockIt block_it) {
-        vector<Item> block_items(block_it->items.begin(), block_it->items.end());
-        vector<vector<Item>> blocks = blocks_content_by_median(block_items, M/2 + 1); // 2 blocks
+        vector<vector<Item>> blocks = blocks_content_by_median(block_it->items, M/2 + 1); // 2 blocks
 
         if (blocks.size() > 2) {
             throw invalid_argument("/!\\ Split D1 block: more than 2 blocks" );
         }
 
-        BlockT new_block;
+        BlockT new_block(M+1);
         new_block.location = BlockT::Location::D1;
         BlockIt new_block_it = D1.insert(block_it, move(new_block)); // before
 
@@ -208,11 +193,18 @@ private:
         return sortie;
     }
 
-    void delete_pair_from_keymap_it(typename unordered_map<Key, pair<BlockIt, ItemIt>>::iterator it) {
+    void delete_pair_from_keymap_it(typename boost::unordered_flat_map<Key, pair<BlockIt, size_t>>::iterator it) {
         BlockIt block_it = it->second.first;
-        ItemIt item_it = it->second.second;
+        size_t idx = it->second.second;
 
-        block_it->remove(item_it);
+        //delete
+        size_t last_idx = block_it->items.size()-1;
+        if (idx != last_idx) {
+            //swap-pop for O(1), fix keymap after
+            swap(block_it->items[idx], block_it->items[last_idx]);
+            keymap[block_it->items[idx].first].second = idx;
+        }
+        block_it->items.pop_back();
         keymap.erase(it);
 
         if (block_it->items.empty()) {
@@ -248,7 +240,7 @@ private:
         return true;
     }
 
-    BlockIt get_D0_block_position(vector<Item> block_content) {
+    BlockIt get_D0_block_position(vector<Item> &block_content) {
         Item maxi = block_content.front();
         for (const auto &p : block_content) {
             if (maxi.second < p.second) {
@@ -278,7 +270,7 @@ public:
         this->keymap.clear();
         this->rbtree_D1.clear();
 
-        BlockT b(B);
+        BlockT b(B, M+1);
         this->D1.emplace_back(b);
         BlockIt block_it = this->D1.begin();
         block_it->location = BlockT::Location::D1;
@@ -301,7 +293,7 @@ public:
     void insert_pair(const Item &p) {
         auto it = keymap.find(p.first);
         if (it != keymap.end()) {
-            Value old_v = it->second.second->second;
+            Value old_v = it->second.first->items[it->second.second].second;
             if (p.second < old_v) {
                 delete_pair_from_keymap_it(it);
             } else {
@@ -314,8 +306,8 @@ public:
             throw invalid_argument("Insert Pair: No existing block has ub >= value "+value_as_string(p.second));
         }
 
-        ItemIt item_it = block_it->insert(p);
-        keymap[p.first] = {block_it, item_it};
+        size_t idx = block_it->insert(p);
+        keymap[p.first] = {block_it, idx};
 
         if (block_it->items.size() > M) {
             split_D1_block(block_it);
@@ -330,7 +322,7 @@ public:
         // handle duplicates and existing
         vector<Item> cleaned_L; cleaned_L.reserve(L.size());
         unordered_set<Key> seen_keys;
-        unordered_map<Key, typename vector<Item>::iterator> inserted;
+        boost::unordered_flat_map<Key, typename vector<Item>::iterator> inserted;
         for (const auto p: L) {
             if (seen_keys.count(p.first)) {
                 auto it_v = inserted[p.first];
@@ -342,7 +334,7 @@ public:
             }
             auto it = keymap.find(p.first);
             if (it != keymap.end()) {
-                Value old_v = it->second.second->second;
+                Value old_v = it->second.first->items[it->second.second].second;
                 if (p.second < old_v) {
                     //cout << "Batch Prepend: Key " << p.first << " already exists and deleted." << endl;
                     delete_pair_from_keymap_it(it);
@@ -376,9 +368,8 @@ public:
 
     // collect the M smallest values from union(D0, D1)
     vector<Key> pull(Value &x) {
-        vector<Item> buffer;
-        vector<Key> keys;
-        buffer.reserve(2*M);
+        vector<Item> buffer; buffer.reserve(4*M);
+        vector<Key> keys; keys.reserve(M);
 
         fill_buffer_for_pull(buffer, D0);
         fill_buffer_for_pull(buffer, D1);

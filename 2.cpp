@@ -17,7 +17,7 @@ struct Node {
 pair<Dist_List_T, Prev_List_T> min_heap_dijkstra(Graph& graph, Node_id_T src, int N) {
     Dist_List_T dist(N, INF);
     Prev_List_T parent(N, -1);
-    unordered_map<Node_id_T, bool> visited;
+    vector<bool> visited(N, false);
 
     priority_queue<Node> min_heap;
     dist[src] = 0;
@@ -51,17 +51,17 @@ pair<Dist_List_T, Prev_List_T> min_heap_dijkstra(Graph& graph, Node_id_T src, in
 
 #include <boost/heap/fibonacci_heap.hpp>
 
-pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, int N) {
+pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, int N) { //TODO make this similar to boost
     using Heap = boost::heap::fibonacci_heap<Node>;
     using Handle = Heap::handle_type;
 
     Dist_List_T dist(N, INF);
     Prev_List_T parent(N, -1);
-    unordered_map<Node_id_T, bool> visited;
+    vector<bool> visited(N, false);
     dist[src] = 0;
 
     Heap H;
-    unordered_map<Node_id_T, Handle> handles(N);
+    vector<Handle> handles(N);
     handles[src] = H.push({src, dist[src]});
 
     while (!H.empty()) {

@@ -4,7 +4,7 @@ project(main)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(.)
-find_package( Boost COMPONENTS graph)
+find_package(Boost 1.82 REQUIRED COMPONENTS graph)
 
 add_executable(main
         utils.cpp
