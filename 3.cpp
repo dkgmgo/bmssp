@@ -13,42 +13,19 @@
 
 struct Path_T {
     Dist_T length;
+    int alpha; // number of nodes in the path
     Node_id_T node;
     Node_id_T parent;
-    int alpha; // number of nodes in the path
 
-    Path_T() {
-        length = INF;
-        parent = -1;
-        alpha = 0;
-        node = INF;
-    }
+    Path_T(): length(INF), alpha(0), node(INF), parent(-1) {}
+    Path_T(Dist_T ub): length(ub), alpha(0), node(INF), parent(-1) {}
+    Path_T(const Dist_T ub, const Node_id_T n): length(ub), alpha(0), node(n), parent(-1) {}
+    Path_T(Dist_T l, int a, Node_id_T n, Node_id_T p): length(l), alpha(a), node(n), parent(p) {}
 
-    Path_T(Dist_T ub) {
-        length = ub;
-        alpha = 0;
-        parent = -1;
-        node = INF;
-    }
-
-    Path_T(const Dist_T ub, const Node_id_T n) {
-        length = ub;
-        alpha = 0;
-        parent = -1;
-        node = n;
-    }
-
-    Path_T(Dist_T l, int a, Node_id_T n, Node_id_T p) {
-        length = l;
-        alpha = a;
-        parent = p;
-        node = n;
-    }
-
-    bool operator==(const Path_T& other) const {
+    constexpr bool operator==(const Path_T& other) const noexcept{
         return length == other.length && alpha == other.alpha && node == other.node;
     }
-    bool operator<(const Path_T& other) const {
+    constexpr bool operator<(const Path_T& other) const noexcept{
         if (length != other.length) {
             return length < other.length;
         }
@@ -105,7 +82,7 @@ bool subtree_size_at_least_k(const BMSSP_State &state, Node_id_T node, int k)
     stack.reserve(32);
 
     int count = 0;
-    stack.push_back(node);
+    stack.emplace_back(node);
 
     while (!stack.empty()) {
         Node_id_T u = stack.back();
