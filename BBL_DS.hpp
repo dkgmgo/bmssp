@@ -67,10 +67,7 @@ class BBL_DS {
         Value upper_bound;
         BlockIt block_it;
 
-        RBData(Value ub, BlockIt it_block) {
-            this->upper_bound = ub;
-            this->block_it = it_block;
-        }
+        RBData(Value ub, BlockIt it_block): upper_bound(ub), block_it(it_block){}
 
         RBData() = default;
 
