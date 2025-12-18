@@ -25,8 +25,8 @@ private:
         prev_dist.clear();
         N=N_;
         graph = unit_weight_graph ? random_graph_with_unit_weights(N, M, 42) : random_graph(N, 10, M, 42);
-        auto cd = constant_degree_transformation(graph, N);
-        constant_degree_graph = cd.first;
+        //auto cd = constant_degree_transformation(graph, N);
+        //constant_degree_graph = cd.first;
     }
 
     void initialize(const string &filename) {
@@ -104,7 +104,7 @@ private:
         cout << "Boost Dijkstra" << endl; run_test(boost_dijkstra);
         //verbose = false;
         cout << "BMSSP no cd" << endl; run_test(top_level_BMSSP);
-        cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
+        //cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
     }
 
     void avg_time_of_x_vertex_as_src_helper(int x, const string &title, const string &output){

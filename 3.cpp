@@ -7,7 +7,7 @@
 #include <cassert>
 #include <unordered_set>
 #include <boost/heap/fibonacci_heap.hpp>
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>
+#include <bitset>
 
 #include "BBL_DS.hpp"
 
@@ -146,9 +146,9 @@ pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, in
     }
 }
 
-pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
-    int N = state.cd_N;
-    boost::dynamic_bitset<> W(N), Wi_1(N), Wi(N), P(N);
+template<int N>
+pair<bitset<N>, bitset<N>> find_pivots(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
+    bitset<N> W, Wi_1, Wi, P;
 
     for (const Node_id_T &u : S) {
         W.set(u);
@@ -159,7 +159,7 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
 
     for (int i = 1; i<= k; i++) {
         Wi.reset();
-        for (auto u = Wi_1.find_first(); u != boost::dynamic_bitset<>::npos; u = Wi_1.find_next(u)) {
+        for (auto u = Wi_1._Find_first(); u < Wi_1.size(); u = Wi_1._Find_next(u)) {
             auto outs = boost::out_edges(u, *state.graph_ptr);
             auto ei = outs.first; auto ei_end = outs.second;
             for (; ei != ei_end; ++ei) {
@@ -181,10 +181,10 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
             }
             return {P, W};
         }
-        Wi_1.swap(Wi);
+        swap(Wi_1, Wi);
     }
 
-    for (auto u = W.find_first(); u != boost::dynamic_bitset<>::npos; u = W.find_next(u)) {
+    for (auto u = W._Find_first(); u < W.size(); u = W._Find_next(u)) {
         auto outs = boost::out_edges(u, *state.graph_ptr);
         auto ei = outs.first; auto ei_end = outs.second;
         for (; ei != ei_end; ++ei) {
@@ -207,6 +207,7 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
     return {P, W};
 }
 
+template<int N>
 pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, int l, const Path_T &B, vector<Node_id_T> &S) {
     assert(static_cast<int>(S.size()) <= static_cast<int>(pow(2, l*t)));
 
@@ -214,13 +215,13 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, i
         return base_case_of_BMSSP(state, k, B, S);
     }
 
-    auto piv = find_pivots(state, k, B, S);
+    auto piv = find_pivots<N>(state, k, B, S);
 
     int M = static_cast<int>(pow(2, (l - 1) * t));
     BBL_DS<Node_id_T, Path_T> D;
     D.initialize(M, B);
     Path_T B_prime = B;
-    for (auto x = piv.first.find_first(); x != boost::dynamic_bitset<>::npos; x = piv.first.find_next(x)) {
+    for (auto x = piv.first._Find_first(); x <piv.first.size(); x = piv.first._Find_next(x)) {
         D.insert_pair({x, state.paths[x]});
         B_prime = min(B_prime, state.paths[x]);
     }
@@ -233,7 +234,7 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, i
         auto Si = D.pull(Bi);
 
         Path_T prev_B_prime = B_prime;
-        auto bmssp = BMSSP(state, t, k, l-1, Bi, Si);
+        auto bmssp = BMSSP<N>(state, t, k, l-1, Bi, Si);
         U.insert(bmssp.second.begin(), bmssp.second.end());
         B_prime = bmssp.first;
         assert(prev_B_prime <= B_prime);
@@ -268,7 +269,7 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, i
     }
 
     B_prime = min(B_prime, B);
-    for (auto x = piv.second.find_first(); x != boost::dynamic_bitset<>::npos; x = piv.second.find_next(x)) {
+    for (auto x = piv.second._Find_first(); x < piv.second.size(); x = piv.second._Find_next(x)) {
         if (state.paths[x] < B_prime) {
             U.insert(x);
         }
@@ -287,7 +288,7 @@ pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
     int l = static_cast<int>(ceil(log_n / static_cast<double>(t))); //number of recursions
     vector<Node_id_T> S = {src};
 
-    auto res = BMSSP(state, t, k, l, B, S);
+    auto res = BMSSP<50000>(state, t, k, l, B, S);
 
     Dist_List_T dist; dist.reserve(N);
     Prev_List_T parent; parent.reserve(N);

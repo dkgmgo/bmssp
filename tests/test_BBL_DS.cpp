@@ -79,3 +79,9 @@ TEST_F(BBL_DS_Test, batch_prepend) {
     EXPECT_GE(D0_D1.first.size(), 1);
     EXPECT_EQ(D0_D1.first.size(), 3);
 }
+
+// ajout et suppresion 1M
+
+// test avec une base non vide
+
+// coverage
