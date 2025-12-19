@@ -22,10 +22,10 @@ struct Path_T {
     Path_T(const Dist_T ub, const Node_id_T n): length(ub), alpha(0), node(n), parent(-1) {}
     Path_T(Dist_T l, int a, Node_id_T n, Node_id_T p): length(l), alpha(a), node(n), parent(p) {}
 
-    constexpr bool operator==(const Path_T& other) const noexcept{
+    constexpr bool operator==(const Path_T& other) const noexcept {
         return length == other.length && alpha == other.alpha && node == other.node;
     }
-    constexpr bool operator<(const Path_T& other) const noexcept{
+    constexpr bool operator<(const Path_T& other) const noexcept {
         if (length != other.length) {
             return length < other.length;
         }
@@ -34,10 +34,10 @@ struct Path_T {
         }
         return node < other.node;
     }
-    bool operator!=(const Path_T& other) const { return !(*this == other); }
-    bool operator>(const Path_T& other)  const { return other < *this; }
-    bool operator<=(const Path_T& other) const { return !(other < *this); }
-    bool operator>=(const Path_T& other) const { return !(*this < other); }
+    constexpr bool operator!=(const Path_T& other) const noexcept { return !(*this == other); }
+    constexpr bool operator>(const Path_T& other)  const noexcept { return other < *this; }
+    constexpr bool operator<=(const Path_T& other) const noexcept { return !(other < *this); }
+    constexpr bool operator>=(const Path_T& other) const noexcept { return !(*this < other); }
 
     friend ostream& operator<<(ostream& os, const Path_T& p) {
         os << "{length=" << p.length
@@ -55,12 +55,17 @@ struct BMSSP_State {
     vector<vector<Node_id_T>> forest;
     vector<int> in_degree;
     int cd_N;
+    vector<Node_id_T> subtree_func_visited_set;
+    int subtree_func_visited_token = 1;
+    vector<uint8_t> completed_stamp;
 
     explicit BMSSP_State(Graph &g, Node_id_T src) {
         graph_ptr = &g;
         cd_N = boost::num_vertices(*graph_ptr);
         in_degree.assign(cd_N, 0);
         forest.assign(cd_N, vector<Node_id_T>());
+        subtree_func_visited_set.assign(cd_N, 0);
+        completed_stamp.assign(cd_N, -1);
 
         paths.clear();
         paths.reserve(cd_N);
@@ -71,38 +76,50 @@ struct BMSSP_State {
     }
 };
 
-Path_T temp_Path(const BMSSP_State &state, Node_id_T u, Node_id_T v, Dist_T w) {
+inline Path_T temp_Path(const BMSSP_State &state, Node_id_T u, Node_id_T v, Dist_T w) noexcept {
     return {state.paths[u].length + w, state.paths[u].alpha + 1, v, u};
 }
 
-bool subtree_size_at_least_k(const BMSSP_State &state, Node_id_T node, int k)
+inline bool subtree_size_at_least_k(BMSSP_State &state, Node_id_T node, int k)
 {
-    unordered_set<Node_id_T> visited;
+    if (k >= 2 && state.forest[node].size() < 1) {
+        return false;
+    }
+
+    auto &visited = state.subtree_func_visited_set;
+    const int token = ++state.subtree_func_visited_token;
+
     vector<Node_id_T> stack;
     stack.reserve(32);
 
     int count = 0;
-    stack.emplace_back(node);
+    stack.push_back(node);
 
     while (!stack.empty()) {
         Node_id_T u = stack.back();
         stack.pop_back();
 
-        if (visited.count(u)) {
+        if (visited[u] == token) {
             continue;
         }
 
-        visited.insert(u);
-        if (count++ >= k) {
+        visited[u] = token;
+
+        if (++count >= k) {
             return true;
         }
 
-        stack.insert(stack.end(), state.forest[u].begin(), state.forest[u].end());
+        const auto &children = state.forest[u];
+        for (Node_id_T v : children) {
+            if (visited[v] != token) {
+                stack.push_back(v);
+            }
+        }
     }
     return false;
 }
 
-pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
+pair<Path_T, vector<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
     assert(S.size() == 1);
 
     priority_queue<Path_T, vector<Path_T>, greater<>> min_heap;
@@ -135,20 +152,21 @@ pair<Path_T, unordered_set<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, in
     }
 
     if (static_cast<int>(U0.size()) <= k) {
-        return {B, unordered_set<Node_id_T>(U0.begin(), U0.end())};
+        return {B, U0};
     } else {
-        Path_T B_prime = state.paths[U0.back()]; // due to vector and priority queue the max is the last one
+        Path_T B_prime = state.paths[U0.back()]; //the max is the last one
         U0.pop_back(); // we have k+1 and we want k elements
         if (U0.size() > k) {
             throw runtime_error("Check your base case logic it's not good");
         }
-        return {B_prime, unordered_set<Node_id_T>(U0.begin(), U0.end())};
+        return {B_prime, U0};
     }
 }
 
-pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
+pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
     int N = state.cd_N;
-    boost::dynamic_bitset<> W(N), Wi_1(N), Wi(N), P(N);
+    boost::dynamic_bitset<> W(N), Wi_1(N), Wi(N);
+    vector<Node_id_T> P; P.reserve(S.size());
 
     for (const Node_id_T &u : S) {
         W.set(u);
@@ -176,10 +194,7 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
         }
         W |= Wi;
         if (static_cast<int>(W.count()) > k * static_cast<int>(S.size())) {
-            for (const Node_id_T &u : S) {
-                P.set(u);
-            }
-            return {P, W};
+            return {S, W};
         }
         Wi_1.swap(Wi);
     }
@@ -200,14 +215,14 @@ pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &
 
     for (const Node_id_T &u : S) {
         if (state.in_degree[u] == 0 && subtree_size_at_least_k(state, u, k)) {
-            P.set(u);
+            P.emplace_back(u);
         }
     }
 
     return {P, W};
 }
 
-pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, int l, const Path_T &B, vector<Node_id_T> &S) {
+pair<Path_T, vector<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, int l, const Path_T &B, vector<Node_id_T> &S) {
     assert(static_cast<int>(S.size()) <= static_cast<int>(pow(2, l*t)));
 
     if (l == 0) {
@@ -220,13 +235,13 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, i
     BBL_DS<Node_id_T, Path_T> D;
     D.initialize(M, B);
     Path_T B_prime = B;
-    for (auto x = piv.first.find_first(); x != boost::dynamic_bitset<>::npos; x = piv.first.find_next(x)) {
+    for (const auto &x : piv.first) {
         D.insert_pair({x, state.paths[x]});
         B_prime = min(B_prime, state.paths[x]);
     }
-    unordered_set<Node_id_T> U;
 
-    auto max_u_size = k * pow(2, l * t);
+    int max_u_size = static_cast<int>(k * pow(2, l * t));
+    vector<Node_id_T> U; U.reserve(max_u_size);
 
     while (static_cast<int>(U.size()) < max_u_size && !D.empty()) {
         Path_T Bi;
@@ -234,15 +249,15 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, i
 
         Path_T prev_B_prime = B_prime;
         auto bmssp = BMSSP(state, t, k, l-1, Bi, Si);
-        U.insert(bmssp.second.begin(), bmssp.second.end());
         B_prime = bmssp.first;
         assert(prev_B_prime <= B_prime);
 
         vector<pair<Node_id_T, Path_T>> K;
         for (const Node_id_T &u : bmssp.second) {
-            if (D.contains(u)) {
-                D.delete_pair({u, state.paths[u]});
-            }
+            U.push_back(u);
+            state.completed_stamp[u] = l;
+            D.delete_pair({u, state.paths[u]});
+
             auto outs = boost::out_edges(u, *state.graph_ptr);
             auto ei = outs.first; auto ei_end = outs.second;
             for (; ei != ei_end; ++ei) {
@@ -269,8 +284,8 @@ pair<Path_T, unordered_set<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, i
 
     B_prime = min(B_prime, B);
     for (auto x = piv.second.find_first(); x != boost::dynamic_bitset<>::npos; x = piv.second.find_next(x)) {
-        if (state.paths[x] < B_prime) {
-            U.insert(x);
+        if (state.paths[x] < B_prime && state.completed_stamp[x] != l) {
+            U.push_back(x);
         }
     }
 
