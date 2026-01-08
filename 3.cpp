@@ -58,6 +58,7 @@ struct BMSSP_State {
     vector<Node_id_T> subtree_func_visited_set;
     int subtree_func_visited_token = 1;
     vector<uint8_t> completed_stamp;
+    boost::dynamic_bitset<> W, Wi_1, Wi;
 
     explicit BMSSP_State(Graph &g, Node_id_T src) {
         graph_ptr = &g;
@@ -66,6 +67,9 @@ struct BMSSP_State {
         forest.assign(cd_N, vector<Node_id_T>());
         subtree_func_visited_set.assign(cd_N, 0);
         completed_stamp.assign(cd_N, -1);
+        W = boost::dynamic_bitset<>(cd_N);
+        Wi_1 = boost::dynamic_bitset<>(cd_N);
+        Wi = boost::dynamic_bitset<>(cd_N);
 
         paths.clear();
         paths.reserve(cd_N);
@@ -164,20 +168,20 @@ pair<Path_T, vector<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, int k, co
 }
 
 pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
-    int N = state.cd_N;
-    boost::dynamic_bitset<> W(N), Wi_1(N), Wi(N);
+    state.W.reset();
+    state.Wi_1.reset();
     vector<Node_id_T> P; P.reserve(S.size());
 
     for (const Node_id_T &u : S) {
-        W.set(u);
-        Wi_1.set(u);
+        state.W.set(u);
+        state.Wi_1.set(u);
         state.in_degree[u] = 0;
         state.forest[u].clear();
     }
 
     for (int i = 1; i<= k; i++) {
-        Wi.reset();
-        for (auto u = Wi_1.find_first(); u != boost::dynamic_bitset<>::npos; u = Wi_1.find_next(u)) {
+        state.Wi.reset();
+        for (auto u = state.Wi_1.find_first(); u != boost::dynamic_bitset<>::npos; u = state.Wi_1.find_next(u)) {
             auto outs = boost::out_edges(u, *state.graph_ptr);
             auto ei = outs.first; auto ei_end = outs.second;
             for (; ei != ei_end; ++ei) {
@@ -187,26 +191,26 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
                 if (temp <= state.paths[v]) {
                     state.paths[v] = temp;
                     if (temp < B) {
-                        Wi.set(v);
+                        state.Wi.set(v);
                     }
                 }
             }
         }
-        W |= Wi;
-        if (static_cast<int>(W.count()) > k * static_cast<int>(S.size())) {
-            return {S, W};
+        state.W |= state.Wi;
+        if (static_cast<int>(state.W.count()) > k * static_cast<int>(S.size())) {
+            return {S, state.W};
         }
-        Wi_1.swap(Wi);
+        state.Wi_1.swap(state.Wi);
     }
 
-    for (auto u = W.find_first(); u != boost::dynamic_bitset<>::npos; u = W.find_next(u)) {
+    for (auto u = state.W.find_first(); u != boost::dynamic_bitset<>::npos; u = state.W.find_next(u)) {
         auto outs = boost::out_edges(u, *state.graph_ptr);
         auto ei = outs.first; auto ei_end = outs.second;
         for (; ei != ei_end; ++ei) {
             Node_id_T v = boost::target(*ei, *state.graph_ptr);
             Dist_T w = boost::get(boost::edge_weight, *state.graph_ptr, *ei);
             Path_T temp = temp_Path(state, u, v, w);
-            if (W.test(v) && state.paths[v] == temp) {
+            if (state.W.test(v) && state.paths[v] == temp) {
                 state.forest[u].push_back(v);
                 state.in_degree[v]++;
             }
@@ -219,7 +223,7 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
         }
     }
 
-    return {P, W};
+    return {P, state.W};
 }
 
 pair<Path_T, vector<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, int l, const Path_T &B, vector<Node_id_T> &S) {
