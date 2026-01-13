@@ -121,7 +121,9 @@ private:
     }
 
     void split_D1_block(BlockIt block_it) {
-        vector<vector<Item>> blocks = blocks_content_by_median(block_it->items, M/2 + 1); // 2 blocks
+        int block_size = M/2 + 1;
+        vector<vector<Item>> blocks; blocks.reserve(block_it->items.size()/block_size + 1);
+        blocks_content_by_median(blocks, block_it->items, block_size); // 2 blocks
 
         if (blocks.size() > 2) {
             throw invalid_argument("/!\\ Split D1 block: more than 2 blocks" );
@@ -142,7 +144,7 @@ private:
         register_block_in_RBT(block_it);
     }
 
-    void blocks_content_by_median_helper(vector<vector<Item>> &sortie, vector<Item> &L, int block_size) {
+    void blocks_content_by_median(vector<vector<Item>> &sortie, vector<Item> &L, int block_size) {
         if (L.empty()) {
             throw invalid_argument("L is not supposed to be empty check comparison or inputs");
         }
@@ -175,19 +177,8 @@ private:
             left_block.pop_back();
         }
 
-        blocks_content_by_median_helper(sortie, left_block, block_size);
-        blocks_content_by_median_helper(sortie, right_block, block_size);
-    }
-
-    vector<vector<Item>> blocks_content_by_median(vector<Item> &L, int block_size) {
-        int l_size = static_cast<int>(L.size());
-        vector<vector<Item>> sortie; sortie.reserve(l_size/block_size + 1);
-        if (block_size >= l_size) {
-            sortie.push_back(L);
-        }else {
-            blocks_content_by_median_helper(sortie, L, block_size);
-        }
-        return sortie;
+        blocks_content_by_median(sortie, left_block, block_size);
+        blocks_content_by_median(sortie, right_block, block_size);
     }
 
     void delete_pair_from_keymap_it(typename boost::unordered_flat_map<Key, pair<BlockIt, size_t>>::iterator it) {
@@ -346,7 +337,8 @@ public:
 
         bool just_push_all = is_block_sequence_empty(D0);
         int block_size = static_cast<int>(cleaned_L.size()) <= M ? M : (M+1)/2;
-        vector<vector<Item>> blocks = blocks_content_by_median(cleaned_L, block_size);
+        vector<vector<Item>> blocks; blocks.reserve(cleaned_L.size()/block_size + 1);
+        blocks_content_by_median(blocks, cleaned_L, block_size);
 
         for (int i = static_cast<int>(blocks.size())-1; i >= 0; --i) {
             BlockT block{};
