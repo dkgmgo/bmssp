@@ -51,7 +51,7 @@ struct Path_T {
 
 struct BMSSP_State {
     Graph *graph_ptr;
-    decltype(boost::get(boost::edge_weight, *graph_ptr)) weight_map;
+    vector<vector<Edge>> adj;
     vector<Path_T> paths;
     vector<vector<Node_id_T>> forest;
     vector<int> in_degree;
@@ -63,7 +63,7 @@ struct BMSSP_State {
 
     explicit BMSSP_State(Graph &g, Node_id_T src) {
         graph_ptr = &g;
-        weight_map = boost::get(boost::edge_weight, *graph_ptr);
+        auto weight_map = boost::get(boost::edge_weight, *graph_ptr);
         cd_N = boost::num_vertices(*graph_ptr);
         in_degree.assign(cd_N, 0);
         forest.assign(cd_N, vector<Node_id_T>());
@@ -75,8 +75,14 @@ struct BMSSP_State {
 
         paths.clear();
         paths.reserve(cd_N);
+        adj.resize(cd_N);
         for (int i = 0; i < cd_N; i++) {
             paths.emplace_back(INF, i);
+            adj[i].reserve(boost::out_degree(i, g));
+            for (auto e=boost::out_edges(i, g); e.first != e.second; ++e.first) {
+                auto edg = *e.first;
+                adj[i].emplace_back(edg.m_target, weight_map[edg]);
+            }
         }
         paths[src].length = 0;
     }
@@ -125,6 +131,7 @@ inline bool subtree_size_at_least_k(BMSSP_State &state, Node_id_T node, int k)
     return false;
 }
 
+//TODO remake this from boost's dijkstra visitor?
 pair<Path_T, vector<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
     assert(S.size() == 1);
 
@@ -141,18 +148,12 @@ pair<Path_T, vector<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, int k, co
         if (state.paths[u] > cur) {
             continue;
         }
-        // TODO add break condition on k ?
         U0.push_back(u);
 
-        auto outs = boost::out_edges(u, *state.graph_ptr);
-        auto ei = outs.first; auto ei_end = outs.second;
-        for (; ei != ei_end; ++ei) {
-            auto edge = *ei;
-            Node_id_T v = edge.m_target;
-            Dist_T w = state.weight_map[edge];
-            Path_T temp = temp_Path(state, u, v, w);
-            if (temp <= state.paths[v] && temp < B) {
-                state.paths[v] = temp;
+        for (Edge &e: state.adj[u]) {
+            Path_T temp = temp_Path(state, u, e.to, e.w);
+            if (temp <= state.paths[e.to] && temp < B) {
+                state.paths[e.to] = temp;
                 min_heap.push(temp);
             }
         }
@@ -185,17 +186,12 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
     for (int i = 1; i<= k; i++) {
         state.Wi.reset();
         for (auto u = state.Wi_1.find_first(); u != boost::dynamic_bitset<>::npos; u = state.Wi_1.find_next(u)) {
-            auto outs = boost::out_edges(u, *state.graph_ptr);
-            auto ei = outs.first; auto ei_end = outs.second;
-            for (; ei != ei_end; ++ei) {
-                auto edge = *ei;
-                Node_id_T v = edge.m_target;
-                Dist_T w = state.weight_map[edge];
-                Path_T temp = temp_Path(state, u, v, w);
-                if (temp <= state.paths[v]) {
-                    state.paths[v] = temp;
+            for (Edge &e: state.adj[u]) {
+                Path_T temp = temp_Path(state, u, e.to, e.w);
+                if (temp <= state.paths[e.to]) {
+                    state.paths[e.to] = temp;
                     if (temp < B) {
-                        state.Wi.set(v);
+                        state.Wi.set(e.to);
                     }
                 }
             }
@@ -208,16 +204,11 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
     }
 
     for (auto u = state.W.find_first(); u != boost::dynamic_bitset<>::npos; u = state.W.find_next(u)) {
-        auto outs = boost::out_edges(u, *state.graph_ptr);
-        auto ei = outs.first; auto ei_end = outs.second;
-        for (; ei != ei_end; ++ei) {
-            auto edge = *ei;
-            Node_id_T v = edge.m_target;
-            Dist_T w = state.weight_map[edge];
-            Path_T temp = temp_Path(state, u, v, w);
-            if (state.W.test(v) && state.paths[v] == temp) {
-                state.forest[u].push_back(v);
-                state.in_degree[v]++;
+        for (Edge &e: state.adj[u]) {
+            Path_T temp = temp_Path(state, u, e.to, e.w);
+            if (state.W.test(e.to) && state.paths[e.to] == temp) {
+                state.forest[u].push_back(e.to);
+                state.in_degree[e.to]++;
             }
         }
     }
@@ -267,19 +258,14 @@ pair<Path_T, vector<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, int l, c
             state.completed_stamp[u] = l;
             D.delete_pair({u, state.paths[u]});
 
-            auto outs = boost::out_edges(u, *state.graph_ptr);
-            auto ei = outs.first; auto ei_end = outs.second;
-            for (; ei != ei_end; ++ei) {
-                auto edge = *ei;
-                Node_id_T v = edge.m_target;
-                Dist_T w = state.weight_map[edge];
-                Path_T temp = temp_Path(state, u, v, w);
-                if (temp <= state.paths[v]) {
-                    state.paths[v] = temp;
+            for (Edge &e: state.adj[u]) {
+                Path_T temp = temp_Path(state, u, e.to, e.w);
+                if (temp <= state.paths[e.to]) {
+                    state.paths[e.to] = temp;
                     if (Bi <= temp && temp < B) {
-                        D.insert_pair({v, temp});
+                        D.insert_pair({e.to, temp});
                     } else if (B_prime <= temp && temp < Bi) {
-                        K.push_back({v, temp});
+                        K.push_back({e.to, temp});
                     }
                 }
             }

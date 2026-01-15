@@ -311,7 +311,7 @@ public:
         vector<Item> cleaned_L; cleaned_L.reserve(L.size());
         unordered_set<Key> seen_keys;
         boost::unordered_flat_map<Key, typename vector<Item>::iterator> inserted;
-        for (const auto p: L) {
+        for (const auto &p: L) {
             if (seen_keys.count(p.first)) {
                 auto it_v = inserted[p.first];
                 if (p.second < it_v->second) {
