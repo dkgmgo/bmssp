@@ -10,6 +10,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/unordered/unordered_flat_map.hpp>
+#include <memory>
 #define INF 10000000
 
 #include "RBT.hpp"
@@ -78,6 +79,61 @@ class BBL_DS {
         }
     };
 
+    struct KeyMap {
+        unique_ptr<int[]> sparse;
+        vector<Key> dense;
+        vector<pair<BlockIt, size_t>> values;
+
+        KeyMap() = default;
+
+        explicit KeyMap(int n) {
+            sparse.reset(new int[n]);
+            dense.reserve(n/2);
+            values.reserve(n/2);
+        }
+
+        bool contains(Key key) {
+            int idx = sparse[key];
+            return idx < dense.size() && dense[idx] == key;
+        }
+
+        void update(Key key, pair<BlockIt, size_t> value) {
+            int idx = sparse[key];
+            values[idx] = value;
+        }
+
+        void insert(Key key, pair<BlockIt, size_t> value) {
+            if (!contains(key)) {
+                sparse[key] = dense.size();
+                dense.push_back(key);
+                values.push_back(value);
+            }else {
+                update(key, value);
+            }
+        }
+
+        void erase(Key key) {
+            int idx = sparse[key];
+
+            Key last_key = dense.back();
+            sparse[last_key] = idx;
+            dense[idx] = last_key;
+            values[idx] = values.back();
+
+            dense.pop_back();
+            values.pop_back();
+        }
+
+        pair<BlockIt, size_t> operator[](Key key) {
+            return values[sparse[key]];
+        }
+
+        void clear() {
+            dense.clear();
+            values.clear();
+        }
+    };
+
 private:
     int M;
     Value B{};
@@ -85,7 +141,7 @@ private:
     BlockSeq D1;  // Blocks from regular insertions (TODO: check deque or others)
     RBT<RBData> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
 
-    boost::unordered_flat_map<Key, pair<BlockIt, size_t>> keymap; // for lookups
+    KeyMap map;
 
 
     void register_block_in_RBT(BlockIt block_it) {
@@ -112,7 +168,7 @@ private:
         Value ub = Value(-1*INF);
         for (const auto &p : L) {
             size_t idx = block_it->insert(p);
-            keymap[p.first] = {block_it, idx};
+            map.insert(p.first, {block_it, idx});
             ub = max(ub, p.second);
         }
         if (update_ub) {
@@ -181,19 +237,20 @@ private:
         blocks_content_by_median(sortie, right_block, block_size);
     }
 
-    void delete_pair_from_keymap_it(typename boost::unordered_flat_map<Key, pair<BlockIt, size_t>>::iterator it) {
-        BlockIt block_it = it->second.first;
-        size_t idx = it->second.second;
+    void delete_pair_from_keymap_by_key(Key key) {
+        auto val = map[key];
+        BlockIt block_it = val.first;
+        size_t idx = val.second;
 
         //delete
         size_t last_idx = block_it->items.size()-1;
         if (idx != last_idx) {
             //swap-pop for O(1), fix keymap after
             swap(block_it->items[idx], block_it->items[last_idx]);
-            keymap[block_it->items[idx].first].second = idx;
+            map.insert(block_it->items[idx].first, {block_it, idx});
         }
         block_it->items.pop_back();
-        keymap.erase(it);
+        map.erase(key);
 
         if (block_it->items.empty()) {
             if (block_it->location == BlockT::Location::D0) {
@@ -252,10 +309,10 @@ private:
 public:
     BBL_DS() = default;
 
-    void initialize(int M, Value B) {
+    void initialize(int M, Value B, int N) {
         this->D0.clear();
         this->D1.clear();
-        this->keymap.clear();
+        this->map = KeyMap(N);
         this->rbtree_D1.clear();
 
         BlockT b(B, M+1);
@@ -269,21 +326,20 @@ public:
     }
 
     void delete_pair(const Item &p){
-        auto it = keymap.find(p.first);
-        if (it == keymap.end()) {
+        if (!map.contains(p.first)) {
             //cout << "Delete Pair: Key "<< p.first << " not found." << endl;
             return;
         }
 
-        delete_pair_from_keymap_it(it);
+        delete_pair_from_keymap_by_key(p.first);
     }
 
     void insert_pair(const Item &p) {
-        auto it = keymap.find(p.first);
-        if (it != keymap.end()) {
-            Value old_v = it->second.first->items[it->second.second].second;
+        if (map.contains(p.first)) {
+            auto val = map[p.first];
+            Value &old_v = val.first->items[val.second].second;
             if (p.second < old_v) {
-                delete_pair_from_keymap_it(it);
+                delete_pair_from_keymap_by_key(p.first);
             } else {
                 return;
             }
@@ -295,7 +351,7 @@ public:
         }
 
         size_t idx = block_it->insert(p);
-        keymap[p.first] = {block_it, idx};
+        map.insert(p.first, {block_it, idx});
 
         if (block_it->items.size() > M) {
             split_D1_block(block_it);
@@ -320,12 +376,12 @@ public:
                     continue;
                 }
             }
-            auto it = keymap.find(p.first);
-            if (it != keymap.end()) {
-                Value old_v = it->second.first->items[it->second.second].second;
+            if (map.contains(p.first)) {
+                auto val = map[p.first];
+                Value &old_v = val.first->items[val.second].second;
                 if (p.second < old_v) {
                     //cout << "Batch Prepend: Key " << p.first << " already exists and deleted." << endl;
-                    delete_pair_from_keymap_it(it);
+                    delete_pair_from_keymap_by_key(p.first);
                 }else {
                     continue;
                 }
@@ -370,7 +426,7 @@ public:
                 delete_pair(p);
                 keys.push_back(p.first);
             }
-            if (total_pairs() <= 0) { //if we removed all //TODO check this (always true here)
+            if (total_pairs() <= 0) { //if we removed all
                 x = B;
             }else {
                 Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): Value(INF);
@@ -395,7 +451,7 @@ public:
     }
 
     int total_pairs() {
-        return keymap.size();
+        return map.dense.size();
     }
 
     bool empty() {
@@ -407,7 +463,7 @@ public:
     }
 
     bool contains(Key key) {
-        return keymap.find(key) != keymap.end();
+        return map.contains(key);
     }
 };
 

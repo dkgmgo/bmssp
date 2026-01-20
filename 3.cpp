@@ -233,7 +233,7 @@ pair<Path_T, vector<Node_id_T>> BMSSP(BMSSP_State &state, int t, int k, int l, c
 
     int M = static_cast<int>(pow(2, (l - 1) * t));
     BBL_DS<Node_id_T, Path_T> D;
-    D.initialize(M, B);
+    D.initialize(M, B, state.cd_N);
     Path_T B_prime = B;
     for (const auto &x : piv.first) {
         D.insert_pair({x, state.paths[x]});
