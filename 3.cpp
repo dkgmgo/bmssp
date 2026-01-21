@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <boost/heap/fibonacci_heap.hpp>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
+#include <memory>
 
 #include "BBL_DS.hpp"
 
@@ -54,21 +55,21 @@ struct BMSSP_State {
     vector<vector<Edge>> adj;
     vector<Path_T> paths;
     vector<vector<Node_id_T>> forest;
-    vector<int> in_degree;
+    unique_ptr<uint16_t[]> in_degree;
     int cd_N;
-    vector<Node_id_T> subtree_func_visited_set;
+    unique_ptr<Node_id_T[]> subtree_func_visited_set;
     int subtree_func_visited_token = 1;
-    vector<uint8_t> completed_stamp;
+    unique_ptr<uint8_t[]> completed_stamp;
     boost::dynamic_bitset<> W, Wi_1, Wi;
 
     explicit BMSSP_State(Graph &g, Node_id_T src) {
         graph_ptr = &g;
         auto weight_map = boost::get(boost::edge_weight, *graph_ptr);
         cd_N = boost::num_vertices(*graph_ptr);
-        in_degree.assign(cd_N, 0);
+        in_degree = make_unique<uint16_t[]>(cd_N); memset(in_degree.get(), 0, cd_N * sizeof(uint16_t));
         forest.assign(cd_N, vector<Node_id_T>());
-        subtree_func_visited_set.assign(cd_N, 0);
-        completed_stamp.assign(cd_N, -1);
+        subtree_func_visited_set = make_unique<Node_id_T[]>(cd_N); memset(subtree_func_visited_set.get(), -1, cd_N * sizeof(Node_id_T));
+        completed_stamp = make_unique<uint8_t[]>(cd_N); memset(completed_stamp.get(), UINT8_MAX, cd_N * sizeof(uint8_t));
         W = boost::dynamic_bitset<>(cd_N);
         Wi_1 = boost::dynamic_bitset<>(cd_N);
         Wi = boost::dynamic_bitset<>(cd_N);
@@ -122,7 +123,7 @@ inline bool subtree_size_at_least_k(BMSSP_State &state, Node_id_T node, int k)
         }
 
         const auto &children = state.forest[u];
-        for (Node_id_T v : children) {
+        for (const Node_id_T &v : children) {
             if (visited[v] != token) {
                 stack.push_back(v);
             }
