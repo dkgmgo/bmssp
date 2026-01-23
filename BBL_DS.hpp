@@ -11,6 +11,7 @@
 #include <sstream>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <memory>
+#include <boost/sort/spreadsort/spreadsort.hpp>
 #define INF 10000000
 
 #include "RBT.hpp"
@@ -54,6 +55,9 @@ struct Block {
         return sortie.second;
     }
 };
+
+template<typename T>
+struct is_int_like: integral_constant<bool, is_integral<T>::value>{};
 
 template <typename Key, typename Value>
 class BBL_DS {
@@ -103,19 +107,15 @@ class BBL_DS {
         }
 
         void insert(Key key, pair<BlockIt, size_t> value) {
-            if (!contains(key)) {
-                sparse[key] = dense.size();
-                dense.push_back(key);
-                values.push_back(value);
-            }else {
-                update(key, value);
-            }
+            sparse[key] = dense.size();
+            dense.push_back(key);
+            values.push_back(value);
         }
 
         void erase(Key key) {
             int idx = sparse[key];
 
-            Key last_key = dense.back();
+            Key &last_key = dense.back();
             sparse[last_key] = idx;
             dense[idx] = last_key;
             values[idx] = values.back();
@@ -168,7 +168,12 @@ private:
         Value ub = Value(-1*INF);
         for (const auto &p : L) {
             size_t idx = block_it->insert(p);
-            map.insert(p.first, {block_it, idx});
+            if (block_it->location == BlockT::Location::D1) {
+                // we are batch inserting in D1, so the key is already in the structure
+                map.update(p.first, {block_it, idx});
+            }else {
+                map.insert(p.first, {block_it, idx});
+            }
             ub = max(ub, p.second);
         }
         if (update_ub) {
@@ -239,15 +244,15 @@ private:
 
     void delete_pair_from_keymap_by_key(Key key) {
         auto val = map[key];
-        BlockIt block_it = val.first;
-        size_t idx = val.second;
+        BlockIt &block_it = val.first;
+        size_t &idx = val.second;
 
         //delete
         size_t last_idx = block_it->items.size()-1;
         if (idx != last_idx) {
             //swap-pop for O(1), fix keymap after
             swap(block_it->items[idx], block_it->items[last_idx]);
-            map.insert(block_it->items[idx].first, {block_it, idx});
+            map.update(block_it->items[idx].first, {block_it, idx});
         }
         block_it->items.pop_back();
         map.erase(key);
@@ -365,17 +370,33 @@ public:
 
         // handle duplicates and existing
         vector<Item> cleaned_L; cleaned_L.reserve(L.size());
-        unordered_set<Key> seen_keys;
-        boost::unordered_flat_map<Key, typename vector<Item>::iterator> inserted;
-        for (const auto &p: L) {
-            if (seen_keys.count(p.first)) {
-                auto it_v = inserted[p.first];
-                if (p.second < it_v->second) {
-                    cleaned_L.erase(it_v);
-                }else {
-                    continue;
-                }
+
+        if(is_int_like<Key>::value) {
+            boost::sort::spreadsort::integer_sort(L.begin(), L.end(),[](const Item& x, unsigned shift) {
+                return static_cast<unsigned>(x.first) >> shift;
+            });
+        }else {
+            sort(L.begin(), L.end(), [](auto &a, auto &b) {
+                if (a.first != b.first) return a.first < b.first;
+                return a.second < b.second;
+            });
+        }
+
+        for (size_t i = 0; i < L.size(); ) {
+            size_t j = i + 1;
+            Value best = L[i].second;
+
+            while (j < L.size() && L[j].first == L[i].first) {
+                best = min(best, L[j].second);
+                ++j;
             }
+
+            cleaned_L.emplace_back(L[i].first, best);
+            i = j;
+        }
+        L.clear(); L.swap(cleaned_L);
+
+        for (const auto &p: L) {
             if (map.contains(p.first)) {
                 auto val = map[p.first];
                 Value &old_v = val.first->items[val.second].second;
@@ -386,9 +407,7 @@ public:
                     continue;
                 }
             }
-            cleaned_L.emplace_back(p);
-            seen_keys.insert(p.first);
-            inserted[p.first] = prev(cleaned_L.end());
+            cleaned_L.push_back(p);
         }
 
         bool just_push_all = is_block_sequence_empty(D0);
