@@ -36,6 +36,10 @@ struct Block {
         items.reserve(max_size);
     }
 
+    Block(Value ub, Location loc, int max_size) : upper_bound(ub), location(loc) {
+        items.reserve(max_size);
+    }
+
     size_t insert(const Item &p) {
         items.push_back(p);
         return items.size()-1;
@@ -442,7 +446,7 @@ public:
 
         if (n <= M) {
             for (const auto &p : buffer) {
-                delete_pair(p);
+                delete_pair_from_keymap_by_key(p.first);
                 keys.push_back(p.first);
             }
             if (total_pairs() <= 0) { //if we removed all
@@ -460,7 +464,7 @@ public:
         });
 
         for (int i = 0; i < M; i++) {
-            delete_pair(buffer[i]);
+            delete_pair_from_keymap_by_key(buffer[i].first);
             keys.push_back(buffer[i].first);
         }
         Value x0 = !is_block_sequence_empty(D0) ? D0.front().min_value(): Value(INF);

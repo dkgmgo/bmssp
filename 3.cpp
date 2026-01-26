@@ -173,6 +173,10 @@ pair<Path_T, vector<Node_id_T>> base_case_of_BMSSP(BMSSP_State &state, int k, co
 }
 
 pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state, int k, const Path_T &B, vector<Node_id_T> &S) {
+    for (auto u = state.W.find_first(); u != boost::dynamic_bitset<>::npos; u = state.W.find_next(u)) {
+        state.in_degree[u] = 0;
+        state.forest[u].clear();
+    }
     state.W.reset();
     state.Wi_1.reset();
     vector<Node_id_T> P; P.reserve(S.size());
@@ -180,14 +184,12 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
     for (const Node_id_T &u : S) {
         state.W.set(u);
         state.Wi_1.set(u);
-        state.in_degree[u] = 0;
-        state.forest[u].clear();
     }
 
     for (int i = 1; i<= k; i++) {
         state.Wi.reset();
         for (auto u = state.Wi_1.find_first(); u != boost::dynamic_bitset<>::npos; u = state.Wi_1.find_next(u)) {
-            for (Edge &e: state.adj[u]) {
+            for (const Edge &e: state.adj[u]) {
                 Path_T temp = temp_Path(state, u, e.to, e.w);
                 if (temp <= state.paths[e.to]) {
                     state.paths[e.to] = temp;
@@ -204,13 +206,11 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
         state.Wi_1.swap(state.Wi);
     }
 
-    for (auto u = state.W.find_first(); u != boost::dynamic_bitset<>::npos; u = state.W.find_next(u)) {
-        for (Edge &e: state.adj[u]) {
-            Path_T temp = temp_Path(state, u, e.to, e.w);
-            if (state.W.test(e.to) && state.paths[e.to] == temp) {
-                state.forest[u].push_back(e.to);
-                state.in_degree[e.to]++;
-            }
+    for (auto v = state.W.find_first(); v != boost::dynamic_bitset<>::npos; v = state.W.find_next(v)) {
+        const Node_id_T &u = state.paths[v].parent;
+        if (state.W.test(u)) {
+            state.forest[u].push_back(v);
+            state.in_degree[v]++;
         }
     }
 
