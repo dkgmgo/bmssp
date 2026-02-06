@@ -19,9 +19,9 @@ struct Path_T {
     Node_id_T parent;
 
     Path_T(): length(INF), alpha(0), node(INF), parent(-1) {}
-    Path_T(Dist_T ub): length(ub), alpha(0), node(INF), parent(-1) {}
-    Path_T(const Dist_T ub, const Node_id_T n): length(ub), alpha(0), node(n), parent(-1) {}
-    Path_T(Dist_T l, int a, Node_id_T n, Node_id_T p): length(l), alpha(a), node(n), parent(p) {}
+    Path_T(const Dist_T &ub): length(ub), alpha(0), node(INF), parent(-1) {}
+    Path_T(const Dist_T &ub, const Node_id_T &n): length(ub), alpha(0), node(n), parent(-1) {}
+    Path_T(const Dist_T &l, const int &a, const Node_id_T &n, const Node_id_T &p): length(l), alpha(a), node(n), parent(p) {}
 
     constexpr bool operator==(const Path_T& other) const noexcept {
         return length == other.length && alpha == other.alpha && node == other.node;
@@ -67,7 +67,7 @@ struct BMSSP_State {
         auto weight_map = boost::get(boost::edge_weight, *graph_ptr);
         cd_N = boost::num_vertices(*graph_ptr);
         in_degree = make_unique<uint16_t[]>(cd_N); memset(in_degree.get(), 0, cd_N * sizeof(uint16_t));
-        forest.assign(cd_N, vector<Node_id_T>());
+        forest.resize(cd_N);
         subtree_func_visited_set = make_unique<Node_id_T[]>(cd_N); memset(subtree_func_visited_set.get(), -1, cd_N * sizeof(Node_id_T));
         completed_stamp = make_unique<uint8_t[]>(cd_N); memset(completed_stamp.get(), UINT8_MAX, cd_N * sizeof(uint8_t));
         W = boost::dynamic_bitset<>(cd_N);
