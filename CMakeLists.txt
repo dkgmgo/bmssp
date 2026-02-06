@@ -7,15 +7,9 @@ set(CMAKE_BUILD_TYPE Release)
 include_directories(.)
 find_package(Boost 1.82 REQUIRED COMPONENTS graph)
 
-add_executable(main
-        utils.cpp
-        1.cpp
-        2.cpp
-        3.cpp
-        main.cpp
-        RBT.hpp
-        BBL_DS.hpp
-)
+SET(INCLUDE_DIR include/bmssp.hpp include/dijkstras.hpp include/utils/graph_utils.hpp include/utils/file_utils.hpp include/common.hpp)
+SET(OTHER_DIRS data_structures/BBL_DS.hpp apps/runner.hpp apps/benchmark.hpp)
+add_executable(main main.cpp ${INCLUDE_DIR} ${OTHER_DIRS})
 target_link_libraries(main PRIVATE ${Boost_LIBRARIES})
 
 include(FetchContent)

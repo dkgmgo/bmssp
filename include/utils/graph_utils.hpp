@@ -1,4 +1,11 @@
-#include "utils.hpp"
+#ifndef GRAPH_UTILS_HPP
+#define GRAPH_UTILS_HPP
+
+#include <random>
+#include <unordered_set>
+#include "../common.hpp"
+
+using namespace std;
 
 inline uint64_t encode_edge(int u, int v) {
     return uint64_t(u) << 32 | uint64_t(v);
@@ -160,3 +167,5 @@ pair<Graph, int> constant_degree_transformation(Graph G, int N) {
 
     return {G_prime, nextId+1};
 }
+
+#endif //GRAPH_UTILS_HPP

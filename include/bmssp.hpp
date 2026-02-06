@@ -1,16 +1,14 @@
-/*
- * BMSSP from paper https://arxiv.org/pdf/2504.17033
- */
+#ifndef BMSSP_HPP
+#define BMSSP_HPP
 
-#include "3.hpp"
-
-#include <cassert>
-#include <unordered_set>
-#include <boost/heap/fibonacci_heap.hpp>
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>
+#include <queue> //#include <boost/heap/fibonacci_heap.hpp>
 #include <memory>
+#include <cassert>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
+#include "common.hpp"
+#include "data_structures/BBL_DS.hpp"
 
-#include "BBL_DS.hpp"
+using namespace std;
 
 struct Path_T {
     Dist_T length;
@@ -48,6 +46,13 @@ struct Path_T {
            << "}";
         return os;
     }
+};
+
+struct Edge {
+    Node_id_T to;
+    Dist_T w;
+
+    explicit Edge(Node_id_T to, Dist_T w) : to(to), w(w) {}
 };
 
 struct BMSSP_State {
@@ -310,3 +315,5 @@ pair<Dist_List_T, Prev_List_T> top_level_BMSSP(Graph& g, Node_id_T src, int N) {
 
     return {dist, parent};
 }
+
+#endif //BMSSP_HPP

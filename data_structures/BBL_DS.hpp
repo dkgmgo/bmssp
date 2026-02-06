@@ -2,11 +2,11 @@
  * A block-based linked list data structure as described in the paper https://arxiv.org/pdf/2504.17033
  */
 
-#ifndef DIJKSTRA_BBL_DS_HPP
-#define DIJKSTRA_BBL_DS_HPP
+#ifndef BBL_DS_HPP
+#define BBL_DS_HPP
 
 #include <list>
-#include <unordered_set>
+#include <set>
 #include <vector>
 #include <sstream>
 #include <boost/unordered/unordered_flat_map.hpp>
@@ -14,7 +14,7 @@
 #include <boost/sort/spreadsort/spreadsort.hpp>
 #define INF 10000000
 
-#include "RBT.hpp"
+using namespace std;
 
 template <typename Key, typename Value>
 struct Block {
@@ -143,7 +143,7 @@ private:
     Value B{};
     BlockSeq D0;  // Blocks from batch_prepend
     BlockSeq D1;  // Blocks from regular insertions (TODO: check deque or others)
-    RBT<RBData> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
+    set<RBData> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
 
     KeyMap map;
 
@@ -155,17 +155,16 @@ private:
 
     void unregister_block_in_RBT(BlockIt block_it) {
         RBData data{block_it->upper_bound, block_it};
-        rbtree_D1.remove(data);
+        rbtree_D1.erase(data);
     }
 
     BlockIt which_D1_block_for_value(Value value) {
-        RBData data{value};
-        auto node = rbtree_D1.lower_bound(data);
-        if (node == nullptr) {
+        RBData query{value};
+        auto resp = rbtree_D1.lower_bound(query);
+        if (resp == rbtree_D1.end()) {
             return D1.end();
         }
-
-        return node->data.block_it;
+        return resp->block_it;
     }
 
     void block_batch_insert(vector<Item> &L, BlockIt block_it, bool update_ub=false) {
@@ -490,4 +489,4 @@ public:
     }
 };
 
-#endif
+#endif //BBL_DS_HPP

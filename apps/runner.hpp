@@ -1,15 +1,15 @@
-#ifndef DIJKSTRA_RUNNER_HPP
-#define DIJKSTRA_RUNNER_HPP
+#ifndef RUNNER_HPP
+#define RUNNER_HPP
 
 #include <functional>
 #include <chrono>
 #include <fstream>
+#include "../include/utils/graph_utils.hpp"
+#include "../include/utils/file_utils.hpp"
+#include "../include/dijkstras.hpp"
+#include "../include/bmssp.hpp"
 
-#include "utils.hpp"
-#include "file_utils.hpp"
-#include "3.hpp"
-#include "2.hpp"
-#include "1.hpp"
+using namespace std;
 
 struct Runner {
     Graph graph;
@@ -97,25 +97,24 @@ private:
     }
 
     void quicktest_helper() {
-        //cout << "Vanilla Dijkstra" << endl; run_test(dijkstra);
         cout << "Min Heap Dijkstra" << endl; run_test(min_heap_dijkstra);
         verbose = true;
         cout << "Fibo heap Dijkstra" << endl; run_test(fibo_heap_dijkstra);
         cout << "Boost Dijkstra" << endl; run_test(boost_dijkstra);
         //verbose = false;
-        cout << "BMSSP no cd" << endl; run_test(top_level_BMSSP);
-        cout << "BMSSP" << endl; run_test(top_level_BMSSP, true);
+        cout << "BMSSP" << endl; run_test(top_level_BMSSP);
+        cout << "BMSSP CD" << endl; run_test(top_level_BMSSP, true);
     }
 
     void avg_time_of_x_vertex_as_src_helper(int x, const string &title, const string &output){
         ofstream file(output);
         file << title;
 
-        double bmssp_time = 0;
+        double bmssp_cd_time = 0;
         double boost_time = 0;
         double min_heap_time = 0;
         double fibo_heap_time = 0;
-        double bmssp_no_cd_time = 0;
+        double bmssp_time = 0;
         double last_boost_time = 0;
 
         for (int i=0; i<x; i++) {
@@ -133,24 +132,29 @@ private:
             line += "\n Fibo_heap_dijkstra time: " + to_string(res.first);
             fibo_heap_time += res.first;
             res = run_test(top_level_BMSSP);
-            line += "\n BMSSP_no_cd time: " + to_string(res.first) + " Ratio to boost: " + to_string(res.first/last_boost_time);
-            bmssp_no_cd_time += res.first;
-            res = run_test(top_level_BMSSP, true);
-            line += "\n BMSSP time: " + to_string(res.first)+ " Ratio to boost: " + to_string(res.first/last_boost_time) + "\n";
+            line += "\n BMSSP time: " + to_string(res.first) + " Ratio to boost: " + to_string(res.first/last_boost_time);
             bmssp_time += res.first;
+            res = run_test(top_level_BMSSP, true);
+            line += "\n BMSSP_CD time: " + to_string(res.first)+ " Ratio to boost: " + to_string(res.first/last_boost_time) + "\n";
+            bmssp_cd_time += res.first;
             file << line;
         }
 
         file << "\n Average Boost Time: " << boost_time/x;
         file << "\n Average Min heap Time: " << min_heap_time/x;
         file << "\n Average Fibo heap Time: " << fibo_heap_time/x;
-        file << "\n Average BMSSP no cd Time: " << bmssp_no_cd_time/x << " Ratio to boost: " << bmssp_no_cd_time/boost_time;
         file << "\n Average BMSSP Time: " << bmssp_time/x << " Ratio to boost: " << bmssp_time/boost_time;
+        file << "\n Average BMSSP CD Time: " << bmssp_cd_time/x << " Ratio to boost: " << bmssp_cd_time/boost_time;
         file << "\n";
     }
 
 public:
-
+    /**
+     * Run a quicktest on a randomly generated graph
+     * @param N the number of vertices
+     * @param M the number of edges
+     * @param unit_weight_graph if all weights should be 1
+     */
     void quicktest(int N, int M, bool unit_weight_graph=false) {
         string msg = unit_weight_graph ? "=========== Quicktest on a random unit weight graph N: " + to_string(N) + " M: " + to_string(M) + " ===========>"
         : "=========== Quicktest on a random graph N: " + to_string(N) + " M: " + to_string(M) + " ===========>";
@@ -186,7 +190,7 @@ public:
     }
 
     /**
-     * Comparing on many random graphs
+     * Comparing on a lot of random graphs
      * @param N_max
      */
     void write_big_file(long long N_max) {
@@ -206,15 +210,15 @@ public:
                 res = run_test(fibo_heap_dijkstra);
                 line += "\n Fibo_heap_dijkstra:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
                 res = run_test(top_level_BMSSP);
-                line += "\n BMSSP_no_cd:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                line += "\n BMSSP_no_cd_time/Boost_dijkstra_time = " + to_string(res.first/boost_time);
-                res = run_test(top_level_BMSSP, true);
                 line += "\n BMSSP:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                line += "\n BMSSP_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
+                line += "\n BMSSP_time/Boost_dijkstra_time = " + to_string(res.first/boost_time);
+                res = run_test(top_level_BMSSP, true);
+                line += "\n BMSSP_CD:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+                line += "\n BMSSP_CD_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
                 file << "\nN: " << i << " M: "<< j << " Results: "<< line;
             }
         }
     }
 };
 
-#endif
+#endif //RUNNER_HPP
