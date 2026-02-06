@@ -1,17 +1,18 @@
-#include "../BBL_DS.hpp"
+#include "../data_structures/BBL_DS.hpp"
 #include <gtest/gtest.h>
 
 using namespace std;
 
 int M = 3;
 int B = 50000;
+int N = 50;
 
 class BBL_DS_Test : public ::testing::Test {
 protected:
     BBL_DS<int, int> ds{};
 
     void SetUp() override {
-        ds.initialize(M, B);
+        ds.initialize(M, B, N);
     }
 };
 

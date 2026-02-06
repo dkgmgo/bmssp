@@ -1,9 +1,15 @@
+#ifndef DIJKSTRAS_HPP
+#define DIJKSTRAS_HPP
+
+#include <queue>
+#include "common.hpp"
+
 /*
  *Min heap and Fibonacci heap Dijkstra
  *src: https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
  */
 
-#include "2.hpp"
+using namespace std;
 
 struct Node {
     Node_id_T name{};
@@ -93,11 +99,20 @@ pair<Dist_List_T, Prev_List_T> fibo_heap_dijkstra(Graph& graph, Node_id_T src, i
     return {dist, parent};
 }
 
+/**
+* BGL's super optimized Dijkstra
+*/
+
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 
 pair<Dist_List_T, Prev_List_T> boost_dijkstra(Graph& graph, Node_id_T src, int N) {
-    Dist_List_T dist(N, INF);
-    Prev_List_T parent(N, -1);
-    boost::dijkstra_shortest_paths(graph, src, boost::distance_map(&dist[0]).predecessor_map(&parent[0]));
+    Dist_List_T dist(N);
+    Prev_List_T parent(N);
+    boost::dijkstra_shortest_paths(graph, src,
+        boost::predecessor_map(boost::make_iterator_property_map(parent.begin(), boost::get(boost::vertex_index, graph)))
+        .distance_map(boost::make_iterator_property_map(dist.begin(), boost::get(boost::vertex_index, graph)))
+    );
     return {dist, parent};
 }
+
+#endif //DIJKSTRAS_HPP

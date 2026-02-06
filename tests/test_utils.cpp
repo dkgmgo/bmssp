@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
-#include "utils.hpp"
+#include "include/common.hpp"
+#include "include/utils/graph_utils.hpp"
 
 using namespace std;
 

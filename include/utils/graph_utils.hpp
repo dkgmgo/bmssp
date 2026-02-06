@@ -1,4 +1,11 @@
-#include "utils.hpp"
+#ifndef GRAPH_UTILS_HPP
+#define GRAPH_UTILS_HPP
+
+#include <random>
+#include <unordered_set>
+#include "../common.hpp"
+
+using namespace std;
 
 inline uint64_t encode_edge(int u, int v) {
     return uint64_t(u) << 32 | uint64_t(v);
@@ -17,7 +24,7 @@ Graph random_graph(long long N, int max_weight, long long edges_count, int seed)
     }
 
     vector<Dist_T> weights(edges_count, 0);
-    vector<Edge> edges(edges_count, {-1, -1});
+    vector<pair<Node_id_T, Node_id_T>> edges(edges_count, {-1, -1});
     unordered_set<uint64_t> seen; seen.reserve(edges_count*2);
 
     //connect the source 0 with something
@@ -160,3 +167,5 @@ pair<Graph, int> constant_degree_transformation(Graph G, int N) {
 
     return {G_prime, nextId+1};
 }
+
+#endif //GRAPH_UTILS_HPP

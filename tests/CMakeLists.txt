@@ -1,27 +1,11 @@
 enable_testing()
-add_executable(test_BBL_DS test_BBL_DS.cpp)
-target_link_libraries(test_BBL_DS
-        gtest
-        gtest_main
-)
-
 include(GoogleTest)
-gtest_discover_tests(test_BBL_DS)
 
-add_executable(test_RBT test_RBT.cpp)
-target_link_libraries(test_RBT
-        gtest
-        gtest_main
-)
+function(add_gtest test_name)
+    add_executable(${test_name} ${ARGN})
+    target_link_libraries(${test_name} gtest gtest_main)
+    gtest_discover_tests(${test_name})
+endfunction()
 
-include(GoogleTest)
-gtest_discover_tests(test_RBT)
-
-add_executable(test_utils test_utils.cpp ../utils.cpp)
-target_link_libraries(test_utils
-        gtest
-        gtest_main
-)
-
-include(GoogleTest)
-gtest_discover_tests(test_utils)
+add_gtest(test_BBL_DS test_BBL_DS.cpp)
+add_gtest(test_utils test_utils.cpp ../include/utils/graph_utils.hpp)

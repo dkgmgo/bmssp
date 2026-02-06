@@ -4,8 +4,7 @@
 #include <fstream>
 #include <string>
 #include <boost/graph/graphml.hpp>
-
-#include  "utils.hpp"
+#include "../common.hpp"
 
 using namespace std;
 
@@ -124,4 +123,4 @@ public:
     }
 };
 
-#endif
+#endif //FILE_UTILS_HPP
