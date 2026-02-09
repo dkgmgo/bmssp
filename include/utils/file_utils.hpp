@@ -48,6 +48,7 @@ struct BGP_Info {
         dp.property("Country", get(&Vertex::Country, g));
         dp.property("country", get(&Vertex::country, g));
         dp.property("Name", get(&Vertex::name, g));
+        dp.property("name", get(&Vertex::name, g));
         dp.property("asTime", get(&Vertex::asTime, g));
         dp.property("prefixNum", get(&Vertex::prefixNum, g));
         dp.property("prefixAll", get(&Vertex::prefixAll, g));

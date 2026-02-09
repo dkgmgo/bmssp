@@ -3,7 +3,7 @@ include(GoogleTest)
 
 function(add_gtest test_name)
     add_executable(${test_name} ${ARGN})
-    target_link_libraries(${test_name} gtest gtest_main)
+    target_link_libraries(${test_name} PRIVATE gtest gtest_main Boost::graph)
     gtest_discover_tests(${test_name})
 endfunction()
 
