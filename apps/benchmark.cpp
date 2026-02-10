@@ -13,19 +13,25 @@ using namespace std;
 constexpr int RANDOM_SEED = 1234;
 
 const vector<vector<int64_t>> ARGS = {
-    {100, 300, 10},
-    {1000, 3000, 10},
-    {10000, 30000, 10}
+    {10000, 30000, 10},
+    {50000, 150000, 10},
+    {100000, 300000, 10},
+    {500000, 1500000, 10},
+    {1000000, 3000000, 10},
+    {5000000, 15000000, 10},
+    {10000000, 30000000, 10}
 };
 
+string data_path = string(PROJECT_ROOT) + "/data";
 const vector<string> FILES = {
-    "../data/1199167200.1199170800.graphml"
+    data_path + "/1199167200.1199170800.graphml",
 };
 
 struct GraphDataset {
     Graph graph;
     int src;
     int64_t nodes_count;
+    int64_t edges_count;
 };
 class GraphRepository {
 public:
@@ -55,9 +61,10 @@ inline int get_a_source(Graph& graph) {
 
 class BenchFixture : public benchmark::Fixture {
 public:
-    Graph graph;
+    Graph *graph;
     int src;
     int64_t nodes_count = 0;
+    int64_t edges_count = 0;
 };
 
 class RandomGraphFixture : public BenchFixture {
@@ -73,13 +80,15 @@ public:
             string specs = "random nodes_count=" + to_string(N) + " edges_count=" + to_string(M) + " max_weight=" + to_string(max_weight) + " seed=" + to_string(RANDOM_SEED);
             d.graph = go_get_that_graph(specs);
             d.nodes_count = N;
+            d.edges_count = M;
             d.src = get_a_source(d.graph);
             return d;
         });
 
-        graph = dataset.graph;
+        graph = &dataset.graph;
         src = dataset.src;
         nodes_count = dataset.nodes_count;
+        edges_count = dataset.edges_count;
     }
 };
 
@@ -95,13 +104,15 @@ public:
             string specs = "random unweighted nodes_count=" + to_string(N) + " edges_count=" + to_string(M) + " seed=" + to_string(RANDOM_SEED);
             d.graph = go_get_that_graph(specs);
             d.nodes_count = N;
+            d.edges_count = M;
             d.src = get_a_source(d.graph);
             return d;
         });
 
-        graph = dataset.graph;
+        graph = &dataset.graph;
         src = dataset.src;
         nodes_count = dataset.nodes_count;
+        edges_count = dataset.edges_count;
     }
 };
 
@@ -115,13 +126,15 @@ public:
             GraphDataset d;
             d.graph = go_get_that_graph(FILES[idx]);
             d.nodes_count = boost::num_vertices(d.graph);
+            d.edges_count = boost::num_edges(d.graph);
             d.src = get_a_source(d.graph);
             return d;
         });
 
-        graph = dataset.graph;
+        graph = &dataset.graph;
         src = dataset.src;
         nodes_count = dataset.nodes_count;
+        edges_count = dataset.edges_count;
     }
 };
 
@@ -157,13 +170,15 @@ public:
     AlgoFunc algo;
     void RunBenchmark(benchmark::State& st) {
         for (auto _ : st) {
-            auto res = algo(this->graph, this->src, this->nodes_count);
+            auto res = algo(*this->graph, this->src, this->nodes_count);
 
             benchmark::DoNotOptimize(res);
             benchmark::ClobberMemory();
         }
 
         st.SetComplexityN(this->nodes_count);
+        st.counters["nodes_count"] = this->nodes_count;
+        st.counters["edges_count"] = this->edges_count;
     }
 };
 

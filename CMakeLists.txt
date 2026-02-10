@@ -19,6 +19,7 @@ add_executable(main main.cpp)
 target_include_directories(main PRIVATE . include data_structures)
 target_link_libraries(main PRIVATE Boost::graph)
 
+add_definitions(-DPROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 add_executable(bench_it apps/benchmark.cpp)
 target_include_directories(bench_it PRIVATE . include data_structures)
 target_link_libraries(bench_it PRIVATE benchmark::benchmark Boost::graph)

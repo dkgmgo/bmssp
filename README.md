@@ -21,6 +21,7 @@ The goal of this project is to:
 If you are only interested in testing the BMSSP, copy and include `include/bmssp.hpp`, `include/common.hpp` and `data_structures/BBL_DS.hpp` in your project, otherwise, clone the repository.
 
 ### Quickstart and Benchmark
-- As you can see in the `main.cpp` file, the `apps/runner.hpp` file provides some simple examples you might want to try. The benchmark implementation is located in the `apps/benchmark.cpp` file.
+- As you can see in the `main.cpp` file, the `apps/runner.hpp` file provides some simple examples you might want to try. Run the `main` target to see the output.
 - Uncomment the necessary lines in `apps/runner.hpp` if you want to export a graph_viz image or see the distance outputs.
-- There is target `bench_it` that you can use to run the benchmark.
+- The benchmark implementation is located in the `apps/benchmark.cpp` file. There is target `bench_it` that you can use to run the benchmark, the results will be stored in `analysis/results` directory.
+- The script `analysis/scripts/run_bench_and_plot_speedup.sh` runs the benchmark and plots the time ratio against a chosen baseline algorithm (BMSSP by default). The plots are stored in `analysis/plots` directory.
