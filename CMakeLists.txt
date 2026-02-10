@@ -1,23 +1,35 @@
 cmake_minimum_required(VERSION 4.0)
-project(main)
+project(BMSSP_Project)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_BUILD_TYPE Release)
 
-include_directories(.)
-find_package(Boost 1.82 REQUIRED COMPONENTS graph)
-
-SET(INCLUDE_DIR include/bmssp.hpp include/dijkstras.hpp include/utils/graph_utils.hpp include/utils/file_utils.hpp include/common.hpp)
-SET(OTHER_DIRS data_structures/BBL_DS.hpp apps/runner.hpp apps/benchmark.hpp)
-add_executable(main main.cpp ${INCLUDE_DIR} ${OTHER_DIRS})
-target_link_libraries(main PRIVATE ${Boost_LIBRARIES})
+find_package(Boost REQUIRED COMPONENTS graph)
 
 include(FetchContent)
 FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.9.5
+)
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googlebenchmark)
+
+add_executable(main main.cpp)
+target_include_directories(main PRIVATE . include data_structures)
+target_link_libraries(main PRIVATE Boost::graph)
+
+add_definitions(-DPROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+add_executable(bench_it apps/benchmark.cpp)
+target_include_directories(bench_it PRIVATE . include data_structures)
+target_link_libraries(bench_it PRIVATE benchmark::benchmark Boost::graph)
+
+FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/heads/main.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
+
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 add_subdirectory(tests)
-

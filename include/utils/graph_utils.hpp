@@ -2,8 +2,12 @@
 #define GRAPH_UTILS_HPP
 
 #include <random>
+#include <regex>
 #include <unordered_set>
+#include <unordered_map>
+
 #include "../common.hpp"
+#include "file_utils.hpp"
 
 using namespace std;
 
@@ -11,8 +15,8 @@ inline uint64_t encode_edge(int u, int v) {
     return uint64_t(u) << 32 | uint64_t(v);
 }
 
-Graph random_graph(long long N, int max_weight, long long edges_count, int seed) {
-    long long MAX_RETRIES = max(500ll, edges_count+1);
+Graph random_graph(int64_t N, int max_weight, int64_t edges_count, int seed) {
+    int64_t MAX_RETRIES = max(500l, edges_count+1);
 
     mt19937 rng(seed);
     uniform_int_distribution<> weight_dist(1, max_weight);
@@ -28,7 +32,7 @@ Graph random_graph(long long N, int max_weight, long long edges_count, int seed)
     unordered_set<uint64_t> seen; seen.reserve(edges_count*2);
 
     //connect the source 0 with something
-    int zero_outs = max(1ll, edges_count/N);
+    int zero_outs = max(1l, edges_count/N);
     for (int i = 0; i < zero_outs; i++) {
         Node_id_T v = node_dist(rng);
         while (v == 0) {
@@ -58,8 +62,12 @@ Graph random_graph(long long N, int max_weight, long long edges_count, int seed)
     return Graph(edges.begin(), edges.end(), weights.begin(), N);
 }
 
-Graph random_graph_with_unit_weights(long long N, long long edges_count, int seed) {
+Graph random_graph_with_unit_weights(int64_t N, int64_t edges_count, int seed) {
     return random_graph(N, 1, edges_count, seed);
+}
+
+Graph grid_graph(int w, int h) {
+    return random_graph(10, 10, w*h, 42); // FIXME
 }
 
 pair<Graph, int> constant_degree_transformation(Graph G, int N) {
@@ -168,4 +176,41 @@ pair<Graph, int> constant_degree_transformation(Graph G, int N) {
     return {G_prime, nextId+1};
 }
 
+inline unordered_map<string, int64_t> extract_params(const string& input) {
+    unordered_map<string, int64_t> params;
+    regex pattern(R"((\w+)=(\d+))");
+    auto begin = sregex_iterator(input.begin(), input.end(), pattern);
+    auto end = sregex_iterator();
+
+    for (auto it = begin; it != end; ++it) {
+        const smatch& match = *it;
+        params[match[1].str()] = stoi(match[2].str());
+    }
+
+    return params;
+}
+
+/**
+ * This function either generates a graph or loads one located in file base the specifications
+ * @param specifications a graphml filepath or instructions to generate a graph
+ * @return a Graph
+ */
+Graph go_get_that_graph(const string& specifications) {
+    unordered_map<string, int64_t> params;
+    if (specifications.find(".graphml") != string::npos) {
+        return FileUtils::read_graphml<BGP_Info>(specifications, false).first;
+    }
+    if (specifications.find("random unweighted") != string::npos) {
+        params = extract_params(specifications);
+        return random_graph_with_unit_weights(params["nodes_count"], params["edges_count"], static_cast<int>(params["seed"]));
+    }
+    if (specifications.find("random") != string::npos) {
+        params = extract_params(specifications);
+        return random_graph(params["nodes_count"], static_cast<int>(params["max_weight"]), params["edges_count"], static_cast<int>(params["seed"]));
+    }
+    if (specifications.find("grid") != string::npos) {
+        return grid_graph(static_cast<int>(params["w"]), static_cast<int>(params["h"]));
+    }
+    throw invalid_argument("Couldn't find a graph based on your specifications check the API of go_get_that_graph");
+}
 #endif //GRAPH_UTILS_HPP

@@ -6,3 +6,7 @@ cmake-build-*/
 
 # big graphml files
 data/
+
+# bench results and plots
+analysis/results
+analysis/plots
