@@ -5,7 +5,20 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-BUILD_DIR="$PROJECT_ROOT/cmake-build-debug"
+BUILD_DIR=""
+CANDIDATES=("build" "cmake-build-debug" "cmake-build-release")
+
+for dir in "${CANDIDATES[@]}"; do
+    if [ -d "$PROJECT_ROOT/$dir" ]; then
+        BUILD_DIR="$PROJECT_ROOT/$dir"
+        break
+    fi
+done
+if [ -z "$BUILD_DIR" ]; then
+    echo "ERROR: Could not find a build directory."
+    exit 1
+fi
+
 BENCH_EXEC="$BUILD_DIR/bench_it"
 
 RESULTS_DIR="$PROJECT_ROOT/analysis/results"

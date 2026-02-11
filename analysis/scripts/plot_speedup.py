@@ -4,6 +4,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from pathlib import Path
 from datetime import datetime
+import csv
 
 PLOTS_DIR = Path(__file__).resolve().parent.parent / "plots"
 
@@ -39,19 +40,42 @@ def load_results(path, time_key="real_time"): # vs cpu_time
 
 
 def plot_speedups(results, baseline="BMSSP"):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_path = PLOTS_DIR.parent / f"results/speedup_{timestamp}.csv"
     for graph_type, dataset in results.items():
-        x_values = []
-        speedups = defaultdict(list)
+        with open(csv_path, "a") as csvfile:
+            writer = csv.writer(csvfile)
+            x_values = []
+            speedups = defaultdict(list)
+            csv_header = ["nodes", "edges", f"{baseline}_time"]
+            fill_header = True
+            csv_rows = []
 
-        for (nodes, edges) in sorted(dataset.keys()):
-            algos = dataset[(nodes, edges)]
-            if baseline not in algos:
-                continue
-            base_time = algos[baseline]
-            x_values.append(nodes)
+            for (nodes, edges) in sorted(dataset.keys()):
+                algos = dataset[(nodes, edges)]
+                if baseline not in algos:
+                    continue
+                base_time = algos[baseline]
+                x_values.append(nodes)
+                if fill_header:
+                    fill_header = False
+                    for algo in algos:
+                        if algo == baseline:
+                            continue
+                        csv_header.append(f"{algo}_time (ratio)")
 
-            for algo, time in algos.items():
-                speedups[algo].append(base_time / time)
+                next_row = [nodes, edges, f"{base_time:.3f}"]
+                for algo, time in algos.items():
+                    speedups[algo].append(base_time / time)
+                    if algo == baseline:
+                        continue
+                    next_row.append(f"{time:.3f} ({base_time / time:.3f})")
+                csv_rows.append(next_row)
+
+            writer.writerow(["Graph Type: " + graph_type])
+            writer.writerow(csv_header)
+            for row in csv_rows:
+                writer.writerow(row)
 
         plt.figure()
 
@@ -65,7 +89,6 @@ def plot_speedups(results, baseline="BMSSP"):
         plt.title(f"Speedup Plot for ({graph_type})")
         plt.legend()
         plt.grid(True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         plt.savefig(f"{PLOTS_DIR}/speedup_{graph_type}_{timestamp}.png")
         plt.close()

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.22)
 project(BMSSP_Project)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -26,8 +26,8 @@ target_link_libraries(bench_it PRIVATE benchmark::benchmark Boost::graph)
 
 FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/refs/heads/main.zip
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.17.0
 )
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
