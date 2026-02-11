@@ -48,6 +48,7 @@ def plot_speedups(results, baseline="BMSSP"):
             x_values = []
             speedups = defaultdict(list)
             csv_header = ["nodes", "edges", f"{baseline}_time"]
+            fill_header = True
             csv_rows = []
 
             for (nodes, edges) in sorted(dataset.keys()):
@@ -56,13 +57,18 @@ def plot_speedups(results, baseline="BMSSP"):
                     continue
                 base_time = algos[baseline]
                 x_values.append(nodes)
+                if fill_header:
+                    fill_header = False
+                    for algo in algos:
+                        if algo == baseline:
+                            continue
+                        csv_header.append(f"{algo}_time (ratio)")
 
                 next_row = [nodes, edges, f"{base_time:.3f}"]
                 for algo, time in algos.items():
                     speedups[algo].append(base_time / time)
                     if algo == baseline:
                         continue
-                    csv_header.append(f"{algo}_time (ratio)")
                     next_row.append(f"{time:.3f} ({base_time / time:.3f})")
                 csv_rows.append(next_row)
 
