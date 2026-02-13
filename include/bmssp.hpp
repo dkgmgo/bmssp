@@ -213,7 +213,7 @@ pair<vector<Node_id_T>, boost::dynamic_bitset<>> find_pivots(BMSSP_State &state,
 
     for (auto v = state.W.find_first(); v != boost::dynamic_bitset<>::npos; v = state.W.find_next(v)) {
         const Node_id_T &u = state.paths[v].parent;
-        if (state.W.test(u)) {
+        if (u >= 0 && state.W.test(u)) {
             state.forest[u].push_back(v);
             state.in_degree[v]++;
         }

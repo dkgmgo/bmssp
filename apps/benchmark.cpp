@@ -33,6 +33,7 @@ struct GraphDataset {
     int src;
     int64_t nodes_count;
     int64_t edges_count;
+    vector<Dist_T> ref_dist;
 };
 class GraphRepository {
 public:
@@ -66,6 +67,7 @@ public:
     int src;
     int64_t nodes_count = 0;
     int64_t edges_count = 0;
+    vector<Dist_T> *ref_dist;
 };
 
 class RandomGraphFixture : public BenchFixture {
@@ -83,6 +85,7 @@ public:
             d.nodes_count = N;
             d.edges_count = M;
             d.src = get_a_source(d.graph);
+            d.ref_dist = boost_dijkstra(d.graph, d.src, d.nodes_count).first;
             return d;
         });
 
@@ -90,6 +93,7 @@ public:
         src = dataset.src;
         nodes_count = dataset.nodes_count;
         edges_count = dataset.edges_count;
+        ref_dist = &dataset.ref_dist;
     }
 };
 
@@ -107,6 +111,7 @@ public:
             d.nodes_count = N;
             d.edges_count = M;
             d.src = get_a_source(d.graph);
+            d.ref_dist = boost_dijkstra(d.graph, d.src, d.nodes_count).first;
             return d;
         });
 
@@ -114,6 +119,7 @@ public:
         src = dataset.src;
         nodes_count = dataset.nodes_count;
         edges_count = dataset.edges_count;
+        ref_dist = &dataset.ref_dist;
     }
 };
 
@@ -129,6 +135,7 @@ public:
             d.nodes_count = boost::num_vertices(d.graph);
             d.edges_count = boost::num_edges(d.graph);
             d.src = get_a_source(d.graph);
+            d.ref_dist = boost_dijkstra(d.graph, d.src, d.nodes_count).first;
             return d;
         });
 
@@ -136,6 +143,7 @@ public:
         src = dataset.src;
         nodes_count = dataset.nodes_count;
         edges_count = dataset.edges_count;
+        ref_dist = &dataset.ref_dist;
     }
 };
 
@@ -172,6 +180,17 @@ public:
     void RunBenchmark(benchmark::State& st) {
         for (auto _ : st) {
             auto res = algo(*this->graph, this->src, this->nodes_count);
+
+            st.PauseTiming();
+            if (res.first != *this->ref_dist) {
+                for (int i=0; i<res.first.size(); i++) {
+                    if (res.first[i] != (*this->ref_dist)[i]) {
+                        cout << "Different at " << i << " " << (*this->ref_dist)[i] << " " << res.first[i] << endl;
+                    }
+                }
+                st.SkipWithError("Correctness check vs Boost Dijkstra failed!");
+            }
+            st.ResumeTiming();
 
             benchmark::DoNotOptimize(res);
             benchmark::ClobberMemory();

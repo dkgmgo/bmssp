@@ -111,6 +111,7 @@ pair<Dist_List_T, Prev_List_T> boost_dijkstra(Graph& graph, Node_id_T src, int N
     boost::dijkstra_shortest_paths(graph, src,
         boost::predecessor_map(boost::make_iterator_property_map(parent.begin(), boost::get(boost::vertex_index, graph)))
         .distance_map(boost::make_iterator_property_map(dist.begin(), boost::get(boost::vertex_index, graph)))
+        .distance_inf(INF)
     );
     return {dist, parent};
 }
