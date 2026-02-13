@@ -21,19 +21,10 @@ struct Runner {
 
 private:
 
-    void initialize(int N_, int M, bool unit_weight_graph=false) {
+    void initialize(const string& specifications) {
         prev_dist.clear();
-        N=N_;
-        graph = unit_weight_graph ? random_graph_with_unit_weights(N, M, 42) : random_graph(N, 10, M, 42);
-        auto cd = constant_degree_transformation(graph, N);
-        constant_degree_graph = cd.first;
-    }
-
-    void initialize(const string &filename) {
-        prev_dist.clear();
-        auto in = FileUtils::read_bgp_graphml(filename);
-        graph = in.first;
-        N = in.second;
+        graph = go_get_that_graph(specifications);
+        N = boost::num_vertices(graph);
         auto cd = constant_degree_transformation(graph, N);
         constant_degree_graph = cd.first;
     }
@@ -106,7 +97,7 @@ private:
         cout << "BMSSP CD" << endl; run_test(top_level_BMSSP, true);
     }
 
-    void avg_time_of_x_vertex_as_src_helper(int x, const string &title, const string &output){
+    void avg_time_of_x_vertices_as_src_helper(int x, const string &title, const string &output){
         ofstream file(output);
         file << title;
 
@@ -151,42 +142,27 @@ private:
 public:
     /**
      * Run a quicktest on a randomly generated graph
-     * @param N the number of vertices
-     * @param M the number of edges
-     * @param unit_weight_graph if all weights should be 1
+     * @param specifications graph's specs or graphml filepath
      */
-    void quicktest(int N, int M, bool unit_weight_graph=false) {
-        string msg = unit_weight_graph ? "=========== Quicktest on a random unit weight graph N: " + to_string(N) + " M: " + to_string(M) + " ===========>"
-        : "=========== Quicktest on a random graph N: " + to_string(N) + " M: " + to_string(M) + " ===========>";
+    void quicktest(const string& specifications) {
+        string msg = "=========== Quicktest with graph specs: " + specifications + "===========>";
         cout << msg << endl;
-        initialize(N, M, unit_weight_graph);
+        initialize(specifications);
         //export_to_dot();
         //graph_image();
         quicktest_helper();
     }
 
-    void quicktest(const string &filename) {
-        cout << "=========== Quicktest on a graphml from file: " << filename << " ===========>" << endl;
-        initialize(filename);
-        quicktest_helper();
-    }
-
     /**
      * Run the different algorithms x times on the same graph and each time with a different node as the source
-     * @param N number of vertices of the graph to generate
-     * @param M number of edges
+     * @param specifications graph's specs or graphml filepath
      * @param x number of sources for the average
+     * @param output output filename
      */
-    void avg_time_of_x_vertex_as_src(long long N, long long M, bool unit_weight_graph, int x, const string &output="avg_time_of_n_src.txt") {
-        string title =  "avg_time_of_x_vertex_as_src: N = " + to_string(N) + " M = " + to_string(M) + " x = "+ to_string(x) + " unit_weight_graph: " + (unit_weight_graph ? "Yes" : "No \n");
-        initialize(N, M, unit_weight_graph);
-        avg_time_of_x_vertex_as_src_helper(x, title, output);
-    }
-
-    void avg_time_of_x_vertex_as_src(const string &input, int x, const string &output="avg_time_of_n_src_from_graphml.txt") {
-        string title = "avg_time_of_x_vertex_as_src on graphml from file: " + input + " with x = "+to_string(x);
-        initialize(input);
-        avg_time_of_x_vertex_as_src_helper(x, title, output);
+    void avg_time_of_x_vertices_as_src(const string& specifications, int x, const string &output="avg_time_of_n_src.txt") {
+        string title =  "avg_time_of_x_vertices_as_src: graph specs = " + specifications + "; with x = "+to_string(x);
+        initialize(specifications);
+        avg_time_of_x_vertices_as_src_helper(x, title, output);
     }
 
     /**
@@ -198,7 +174,7 @@ public:
 
         for (int i=3; i<=N_max; i+=521) {
             for (int j=i; j<=3*i; j+=i/3) {
-                initialize(i, j);
+                initialize("random nodes_count=" + to_string(i) + " edges_count=" + to_string(j) + " max_weight=" + to_string(10) + " seed=" + to_string(42));
                 cout << "N: " << i << " M: "<< j << endl;
                 prev_dist.clear();
                 string line;
@@ -212,9 +188,9 @@ public:
                 res = run_test(top_level_BMSSP);
                 line += "\n BMSSP:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
                 line += "\n BMSSP_time/Boost_dijkstra_time = " + to_string(res.first/boost_time);
-                res = run_test(top_level_BMSSP, true);
-                line += "\n BMSSP_CD:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                line += "\n BMSSP_CD_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
+                //res = run_test(top_level_BMSSP, true);
+                //line += "\n BMSSP_CD:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+                //line += "\n BMSSP_CD_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
                 file << "\nN: " << i << " M: "<< j << " Results: "<< line;
             }
         }
