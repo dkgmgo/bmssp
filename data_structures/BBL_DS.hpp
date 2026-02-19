@@ -88,25 +88,25 @@ class BBL_DS {
     };
 
     struct KeyMap {
-        unique_ptr<int[]> sparse;
+        unique_ptr<size_t[]> sparse;
         vector<Key> dense;
         vector<pair<BlockIt, size_t>> values;
 
         KeyMap() = default;
 
-        explicit KeyMap(int n) {
-            sparse.reset(new int[n]);
+        explicit KeyMap(const size_t n) {
+            sparse.reset(new size_t[n]);
             dense.reserve(n/2);
             values.reserve(n/2);
         }
 
         bool contains(Key key) {
-            int idx = sparse[key];
+            size_t idx = sparse[key];
             return idx < dense.size() && dense[idx] == key;
         }
 
         void update(Key key, pair<BlockIt, size_t> value) {
-            int idx = sparse[key];
+            size_t idx = sparse[key];
             values[idx] = value;
         }
 
@@ -117,7 +117,7 @@ class BBL_DS {
         }
 
         void erase(Key key) {
-            int idx = sparse[key];
+            size_t idx = sparse[key];
 
             Key &last_key = dense.back();
             sparse[last_key] = idx;
@@ -143,7 +143,7 @@ private:
     Value B{};
     BlockSeq D0;  // Blocks from batch_prepend
     BlockSeq D1;  // Blocks from regular insertions (TODO: check deque or others)
-    set<RBData> rbtree_D1; // Red-Black Tree for D1 upper bounds (TODO: check cpp maps and sets)
+    set<RBData> rbtree_D1; // Red-Black Tree for D1 upper bounds
 
     KeyMap map;
 
@@ -245,6 +245,19 @@ private:
         blocks_content_by_median(sortie, right_block, block_size);
     }
 
+    void delete_block(BlockIt &block_it) {
+        if (block_it->location == BlockT::Location::D0) {
+            D0.erase(block_it);
+        } else {
+            if (block_it->upper_bound != B) {
+                unregister_block_in_RBT(block_it);
+                D1.erase(block_it);
+            }else {
+                block_it->items.clear();
+            }
+        }
+    }
+
     void delete_pair_from_keymap_by_key(Key key) {
         auto val = map[key];
         BlockIt &block_it = val.first;
@@ -261,14 +274,7 @@ private:
         map.erase(key);
 
         if (block_it->items.empty()) {
-            if (block_it->location == BlockT::Location::D0) {
-                D0.erase(block_it);
-            } else {
-                if (block_it->upper_bound != B) {
-                    unregister_block_in_RBT(block_it);
-                    D1.erase(block_it);
-                }
-            }
+            delete_block(block_it);
         }
     }
 

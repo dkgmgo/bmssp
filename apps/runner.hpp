@@ -169,12 +169,12 @@ public:
      * Comparing on a lot of random graphs
      * @param N_max
      */
-    void write_big_file(long long N_max) {
+    void write_big_file(long long N_max, int seed) {
         ofstream file("big_file.txt");
 
         for (int i=3; i<=N_max; i+=521) {
             for (int j=i; j<=3*i; j+=i/3) {
-                initialize("random nodes_count=" + to_string(i) + " edges_count=" + to_string(j) + " max_weight=" + to_string(10) + " seed=" + to_string(42));
+                initialize("random nodes_count=" + to_string(i) + " edges_count=" + to_string(j) + " max_weight=" + to_string(10) + " seed=" + to_string(seed));
                 cout << "N: " << i << " M: "<< j << endl;
                 prev_dist.clear();
                 string line;

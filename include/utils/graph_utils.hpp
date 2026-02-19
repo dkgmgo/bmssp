@@ -19,7 +19,7 @@ Graph random_graph(int64_t N, int max_weight, int64_t edges_count, int seed) {
     int64_t MAX_RETRIES = max(500l, edges_count+1);
 
     mt19937 rng(seed);
-    uniform_int_distribution<> weight_dist(1, max_weight);
+    uniform_real_distribution<> weight_dist(1, max_weight);
     uniform_int_distribution<> node_dist(0, N-1);
     edges_count = min(edges_count, N*(N-1));
 
@@ -176,6 +176,43 @@ pair<Graph, int> constant_degree_transformation(Graph G, int N) {
     return {G_prime, nextId+1};
 }
 
+Graph cylinder_knn_graph(const uint64_t N, double radius, double height, int k, int seed) {
+    Graph G(N);
+    using Point = tuple<double, double, double>;
+    auto euclidian_dist = [](const Point& p1, const Point& p2) {
+        return sqrt(pow(get<0>(p1)-get<0>(p2), 2) + pow(get<1>(p1)-get<1>(p2), 2) + pow(get<2>(p1)-get<2>(p2), 2));
+    };
+
+    vector<Point> points; points.reserve(N);
+    mt19937 rng(seed);
+    uniform_real_distribution<> angle_dist(0.0, 2*M_PI);
+    uniform_real_distribution<> z_dist(-1*height/2, height/2);
+
+    for (uint64_t i = 0; i < N; i++) {
+        double phi = angle_dist(rng);
+        double z = z_dist(rng);
+        double x = radius*cos(phi);
+        double y = radius*sin(phi);
+        points.emplace_back(x, y, z);
+    }
+
+    for (uint64_t i = 0; i < N; i++) {
+        vector<pair<double, uint64_t>> dists; dists.reserve(N);
+        for (uint64_t j = 0; j < N; j++) {
+            dists.emplace_back(euclidian_dist(points[i], points[j]), j);
+        }
+        nth_element(dists.begin(), dists.begin()+k+1, dists.end());
+        for (uint64_t j = 0; j < k+1; j++) {
+            if (i == dists[j].second) {
+                continue;
+            }
+            boost::add_edge(i, dists[j].second, dists[j].first, G);
+        }
+    }
+
+    return G;
+}
+
 inline unordered_map<string, int64_t> extract_params(const string& input) {
     unordered_map<string, int64_t> params;
     regex pattern(R"((\w+)=(\d+))");
@@ -197,20 +234,26 @@ inline unordered_map<string, int64_t> extract_params(const string& input) {
  */
 Graph go_get_that_graph(const string& specifications) {
     unordered_map<string, int64_t> params;
-    if (specifications.find(".graphml") != string::npos) {
-        return FileUtils::read_graphml<BGP_Info>(specifications, false).first;
-    }
-    if (specifications.find("random unweighted") != string::npos) {
+
+    try {
+        if (specifications.find(".graphml") != string::npos) {
+            return FileUtils::read_graphml<BGP_Info>(specifications, false).first;
+        }
         params = extract_params(specifications);
-        return random_graph_with_unit_weights(params["nodes_count"], params["edges_count"], static_cast<int>(params["seed"]));
+        if (specifications.find("random unweighted") != string::npos) {
+            return random_graph_with_unit_weights(params["nodes_count"], params["edges_count"], static_cast<int>(params["seed"]));
+        }
+        if (specifications.find("random") != string::npos) {
+            return random_graph(params["nodes_count"], static_cast<int>(params["max_weight"]), params["edges_count"], static_cast<int>(params["seed"]));
+        }
+        if (specifications.find("grid") != string::npos) {
+            return grid_graph(static_cast<int>(params["w"]), static_cast<int>(params["h"]));
+        }
+        if (specifications.find("metric cylinder") != string::npos) {
+            return cylinder_knn_graph(params["nodes_count"], static_cast<double>(params["r"]), static_cast<double>(params["h"]), static_cast<int>(params["k"]), static_cast<int>(params["seed"]));
+        }
+    } catch (exception& e) {
+        throw invalid_argument("Couldn't find a graph based on your specifications check the API of go_get_that_graph");
     }
-    if (specifications.find("random") != string::npos) {
-        params = extract_params(specifications);
-        return random_graph(params["nodes_count"], static_cast<int>(params["max_weight"]), params["edges_count"], static_cast<int>(params["seed"]));
-    }
-    if (specifications.find("grid") != string::npos) {
-        return grid_graph(static_cast<int>(params["w"]), static_cast<int>(params["h"]));
-    }
-    throw invalid_argument("Couldn't find a graph based on your specifications check the API of go_get_that_graph");
 }
 #endif //GRAPH_UTILS_HPP
