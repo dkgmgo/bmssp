@@ -173,26 +173,25 @@ public:
         ofstream file("big_file.txt");
 
         for (int i=3; i<=N_max; i+=521) {
-            for (int j=i; j<=3*i; j+=i/3) {
-                initialize("random nodes_count=" + to_string(i) + " edges_count=" + to_string(j) + " max_weight=" + to_string(10) + " seed=" + to_string(seed));
-                cout << "N: " << i << " M: "<< j << endl;
-                prev_dist.clear();
-                string line;
-                auto res = run_test(boost_dijkstra);
-                line += "\n Boost_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                double boost_time = res.first;
-                res = run_test(min_heap_dijkstra);
-                line += "\n Min_heap_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                res = run_test(fibo_heap_dijkstra);
-                line += "\n Fibo_heap_dijkstra:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                res = run_test(top_level_BMSSP);
-                line += "\n BMSSP:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                line += "\n BMSSP_time/Boost_dijkstra_time = " + to_string(res.first/boost_time);
-                //res = run_test(top_level_BMSSP, true);
-                //line += "\n BMSSP_CD:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
-                //line += "\n BMSSP_CD_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
-                file << "\nN: " << i << " M: "<< j << " Results: "<< line;
-            }
+            initialize("random nodes_count=" + to_string(i) + " max_weight=" + to_string(10) + " seed=" + to_string(seed));
+            int j = boost::num_edges(graph);
+            cout << "N: " << i << " M: "<< j << endl;
+            prev_dist.clear();
+            string line;
+            auto res = run_test(boost_dijkstra);
+            line += "\n Boost_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+            double boost_time = res.first;
+            res = run_test(min_heap_dijkstra);
+            line += "\n Min_heap_dijkstra::  time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+            res = run_test(fibo_heap_dijkstra);
+            line += "\n Fibo_heap_dijkstra:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+            res = run_test(top_level_BMSSP);
+            line += "\n BMSSP:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+            line += "\n BMSSP_time/Boost_dijkstra_time = " + to_string(res.first/boost_time);
+            //res = run_test(top_level_BMSSP, true);
+            //line += "\n BMSSP_CD:: time: " + to_string(res.first) + "ms " + "mismatch: " + to_string(res.second);
+            //line += "\n BMSSP_CD_time/Boost_dijkstra_time = " + to_string(res.first/boost_time) + "\n";
+            file << "\nN: " << i << " M: "<< j << " Results: "<< line;
         }
     }
 };

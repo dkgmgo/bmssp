@@ -10,72 +10,28 @@ using namespace std;
 
 struct BGP_Info {
     struct Vertex {
-        string Country;
         string name;
-        long prefixNum;
-        long prefixAll;
-        long asTime;
-        long addAll;
-        long addNum;
-        string asNumber;
-        long pathNum;
-        bool active=true;
-        string country;
     };
 
     struct Edge {
-        long pathCount;
-        long edgeTime;
-        long count;
-        long  prefcount;
-        long addCount=0;
-        string cableName;
         string id;
-        double oot=0.0;
-        double ot=0.0;
-        double ocurv=0.0;
         double curv=0.0;
-        double dist=1.0;
-        double odistance=1.0;
         double distance=1.0;
-        long weight=1;
     };
 
     static boost::dynamic_properties get_properties(boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, Vertex, Edge> &g) {
-        boost::dynamic_properties dp;
-        dp.property("asNumber", get(&Vertex::asNumber, g));
-        dp.property("pathNum", get(&Vertex::pathNum, g));
-        dp.property("Country", get(&Vertex::Country, g));
-        dp.property("country", get(&Vertex::country, g));
+        boost::dynamic_properties dp(boost::ignore_other_properties);
         dp.property("Name", get(&Vertex::name, g));
         dp.property("name", get(&Vertex::name, g));
-        dp.property("asTime", get(&Vertex::asTime, g));
-        dp.property("prefixNum", get(&Vertex::prefixNum, g));
-        dp.property("prefixAll", get(&Vertex::prefixAll, g));
-        dp.property("addAll", get(&Vertex::addAll, g));
-        dp.property("addNum", get(&Vertex::addNum, g));
-
-        dp.property("pathCount", get(&Edge::pathCount, g));
-        dp.property("addCount", get(&Edge::addCount, g));
-        dp.property("edgeTime", get(&Edge::edgeTime, g));
-        dp.property("weight", get(&Edge::weight, g));
-        dp.property("prefCount", get(&Edge::prefcount, g));
-        dp.property("count", get(&Edge::count, g));
-        dp.property("cable",get(&Edge::cableName, g));
         dp.property("id",get(&Edge::id, g));
-
-        dp.property("ot", get(&Edge::ot, g));
         dp.property("distance", get(&Edge::distance, g));
         dp.property("curv", get(&Edge::curv, g));
-        dp.property("oot",get(&Edge::oot, g));
-        dp.property("ocurv",get(&Edge::ocurv, g));
-        dp.property("odistance",get(&Edge::odistance, g));
-        
+
         return dp;
     }
 
     static double get_edge_weight(const Edge &e) {
-        return e.distance; //TODO distance or weight ?
+        return e.distance;
     }
 };
 
