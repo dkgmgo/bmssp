@@ -15,59 +15,86 @@ inline uint64_t encode_edge(int u, int v) {
     return uint64_t(u) << 32 | uint64_t(v);
 }
 
-Graph random_graph(int64_t N, int max_weight, int64_t edges_count, int seed) {
-    int64_t MAX_RETRIES = max(500l, edges_count+1);
-
-    mt19937 rng(seed);
-    uniform_int_distribution<> weight_dist(1, max_weight);
-    uniform_int_distribution<> node_dist(0, N-1);
-    edges_count = min(edges_count, N*(N-1));
-
-    if (edges_count < 0) {
-        throw runtime_error("edges must be greater than 0");
+Graph random_barabasi_albert(int m0, int m, int64_t t, int max_weight, int seed) {
+    if (m > m0) {
+        throw invalid_argument("Number of edges per new node cannot be greater than initial number of nodes.");
     }
 
-    vector<Dist_T> weights(edges_count, 0);
-    vector<pair<Node_id_T, Node_id_T>> edges(edges_count, {-1, -1});
-    unordered_set<uint64_t> seen; seen.reserve(edges_count*2);
+    if (t < 0) {
+        throw invalid_argument("Number of steps can't be negative");
+    }
 
-    //connect the source 0 with something
-    int zero_outs = max(1l, edges_count/N);
-    for (int i = 0; i < zero_outs; i++) {
-        Node_id_T v = node_dist(rng);
-        while (v == 0) {
-            v = node_dist(rng);
+    int64_t N = m0+t;
+    int64_t M = 2*m*t + m0*(m0-1);
+    Graph G(N);
+    vector<Node_id_T> repeated_nodes; repeated_nodes.reserve(M);
+    mt19937_64 rng(seed);
+    uniform_real_distribution<> weight_dist(1, max_weight);
+
+    for (int i = 0; i < m0; i++) {
+        for (int j = i+1; j < m0; j++) {
+            Dist_T w = weight_dist(rng);
+            boost::add_edge(i, j, w, G);
+            boost::add_edge(j, i, w, G);
+
+            repeated_nodes.push_back(i);
+            repeated_nodes.push_back(j);
         }
-        edges[i] = {0, v};
-        weights[i] = weight_dist(rng);
-        seen.insert(encode_edge(0, v));
     }
 
-    for (int i = zero_outs; i < edges_count; i++) {
-        int u = node_dist(rng);
-        int v = node_dist(rng);
-        int tries = 0;
-        while (!seen.insert(encode_edge(u, v)).second || u == v) {
-            u = node_dist(rng);
-            v = node_dist(rng);
-            tries++;
-            if (tries >= MAX_RETRIES) {
-                throw runtime_error("Too many collisions");
+    if (repeated_nodes.empty()) {
+        repeated_nodes.push_back(0);
+    }
+
+    for (Node_id_T u = m0; u < N; u++) {
+        unordered_set<int64_t> chosen;
+
+        while (chosen.size() < m) {
+            uniform_int_distribution<size_t> dist(0, repeated_nodes.size()-1);
+            Node_id_T v = repeated_nodes[dist(rng)];
+
+            if (v != u && chosen.insert(v).second) {
+                Dist_T w = weight_dist(rng);
+                boost::add_edge(u, v, w, G);
+                boost::add_edge(v, u, w, G);
+
+                repeated_nodes.push_back(u);
+                repeated_nodes.push_back(v);
             }
         }
-        edges[i] = {u, v};
-        weights[i] = weight_dist(rng);
     }
 
-    return Graph(edges.begin(), edges.end(), weights.begin(), N);
+    return G;
 }
 
-Graph random_graph_with_unit_weights(int64_t N, int64_t edges_count, int seed) {
-    return random_graph(N, 1, edges_count, seed);
+Graph random_graph(int64_t N, int max_weight, int seed) {
+    return random_barabasi_albert(1, 1, N-1, max_weight, seed);
+}
+
+Graph random_graph_with_unit_weights(int64_t N, int seed) {
+    return random_barabasi_albert(1, 1, N-1, 1, seed);
 }
 
 Graph grid_graph(int w, int h) {
-    return random_graph(10, 10, w*h, 42); // FIXME
+    if (w <= 1 || h <= 1) {
+        throw invalid_argument("Minimum grid is a 2x2");
+    }
+
+    Graph G(w*h);
+    for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
+            Node_id_T id = i*h+j;
+            if (j > 0) {
+                boost::add_edge(id-1, id, 1, G);
+                boost::add_edge(id, id-1, 1, G);
+            }
+            if (i > 0) {
+                boost::add_edge(id-h, id, 1, G);
+                boost::add_edge(id, id-h, 1, G);
+            }
+        }
+    }
+    return G;
 }
 
 pair<Graph, int> constant_degree_transformation(Graph G, int N) {
@@ -176,6 +203,43 @@ pair<Graph, int> constant_degree_transformation(Graph G, int N) {
     return {G_prime, nextId+1};
 }
 
+Graph cylinder_knn_graph(const uint64_t N, double radius, double height, int k, int seed) {
+    Graph G(N);
+    using Point = tuple<double, double, double>;
+    auto euclidian_dist = [](const Point& p1, const Point& p2) {
+        return sqrt(pow(get<0>(p1)-get<0>(p2), 2) + pow(get<1>(p1)-get<1>(p2), 2) + pow(get<2>(p1)-get<2>(p2), 2));
+    };
+
+    vector<Point> points; points.reserve(N);
+    mt19937 rng(seed);
+    uniform_real_distribution<> angle_dist(0.0, 2*M_PI);
+    uniform_real_distribution<> z_dist(-1*height/2, height/2);
+
+    for (uint64_t i = 0; i < N; i++) {
+        double phi = angle_dist(rng);
+        double z = z_dist(rng);
+        double x = radius*cos(phi);
+        double y = radius*sin(phi);
+        points.emplace_back(x, y, z);
+    }
+
+    for (uint64_t i = 0; i < N; i++) {
+        vector<pair<double, uint64_t>> dists; dists.reserve(N);
+        for (uint64_t j = 0; j < N; j++) {
+            dists.emplace_back(euclidian_dist(points[i], points[j]), j);
+        }
+        nth_element(dists.begin(), dists.begin()+k+1, dists.end());
+        for (uint64_t j = 0; j < k+1; j++) {
+            if (i == dists[j].second) {
+                continue;
+            }
+            boost::add_edge(i, dists[j].second, dists[j].first, G);
+        }
+    }
+
+    return G;
+}
+
 inline unordered_map<string, int64_t> extract_params(const string& input) {
     unordered_map<string, int64_t> params;
     regex pattern(R"((\w+)=(\d+))");
@@ -197,20 +261,26 @@ inline unordered_map<string, int64_t> extract_params(const string& input) {
  */
 Graph go_get_that_graph(const string& specifications) {
     unordered_map<string, int64_t> params;
-    if (specifications.find(".graphml") != string::npos) {
-        return FileUtils::read_graphml<BGP_Info>(specifications, false).first;
-    }
-    if (specifications.find("random unweighted") != string::npos) {
+
+    try {
+        if (specifications.find(".graphml") != string::npos) {
+            return FileUtils::read_graphml<BGP_Info>(specifications, false).first;
+        }
         params = extract_params(specifications);
-        return random_graph_with_unit_weights(params["nodes_count"], params["edges_count"], static_cast<int>(params["seed"]));
+        if (specifications.find("random unweighted") != string::npos) {
+            return random_graph_with_unit_weights(params["nodes_count"], static_cast<int>(params["seed"]));
+        }
+        if (specifications.find("random") != string::npos) {
+            return random_graph(params["nodes_count"], static_cast<int>(params["max_weight"]), static_cast<int>(params["seed"]));
+        }
+        if (specifications.find("grid") != string::npos) {
+            return grid_graph(static_cast<int>(params["w"]), static_cast<int>(params["h"]));
+        }
+        if (specifications.find("metric cylinder") != string::npos) {
+            return cylinder_knn_graph(params["nodes_count"], static_cast<double>(params["r"]), static_cast<double>(params["h"]), static_cast<int>(params["k"]), static_cast<int>(params["seed"]));
+        }
+    } catch (exception& e) {
+        throw invalid_argument("Couldn't find a graph based on your specifications check the API of go_get_that_graph. This error happened:\n" + string(e.what()));
     }
-    if (specifications.find("random") != string::npos) {
-        params = extract_params(specifications);
-        return random_graph(params["nodes_count"], static_cast<int>(params["max_weight"]), params["edges_count"], static_cast<int>(params["seed"]));
-    }
-    if (specifications.find("grid") != string::npos) {
-        return grid_graph(static_cast<int>(params["w"]), static_cast<int>(params["h"]));
-    }
-    throw invalid_argument("Couldn't find a graph based on your specifications check the API of go_get_that_graph");
 }
 #endif //GRAPH_UTILS_HPP

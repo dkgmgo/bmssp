@@ -36,8 +36,20 @@ protected:
     }
 };
 
+TEST_F(Test_Utils, test_barabasi_albert_props) {
+    int m0=1, m=1, t=50;
+    Graph G = random_barabasi_albert(m0, m, t, 10, 123);
+    EXPECT_EQ(boost::num_vertices(G), m0+t);
+    EXPECT_EQ(boost::num_edges(G), 2*m*t + m0*(m0-1));
+
+    m0=5, m=3, t=30;
+    G = random_barabasi_albert(m0, m, t, 10, 123);
+    EXPECT_EQ(boost::num_vertices(G), m0+t);
+    EXPECT_EQ(boost::num_edges(G), 2*m*t + m0*(m0-1));
+}
+
 TEST_F(Test_Utils, test_unit_weigths_generation) {
-    Map_Graph G = boost_to_map(random_graph_with_unit_weights(5, 12, 123));
+    Map_Graph G = boost_to_map(random_graph_with_unit_weights(5, 123));
     for (const auto &p : G) {
         for (const auto &q : p.second) {
             EXPECT_EQ(q.second, 1);

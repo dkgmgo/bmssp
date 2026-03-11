@@ -1,8 +1,12 @@
 # CMake
 cmake-build-*/
+build/
 
 # Jetbrains
 .idea/
+
+# vs code
+.vscode/
 
 # big graphml files
 data/

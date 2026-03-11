@@ -12,17 +12,18 @@ The goal of this project is to:
 ## Performance
 
 Despite the fact that BMSSP and Dijkstra's algorithms with Fibonacci heap have better complexity in theory, in practice they are slower than a Dijkstra based on Binary Heap or a d-ary heap.
-This is shown by the following benchmark results on randomly generated graphs (the times are in **milliseconds** and the ratios are over the BMSSP time):
+This is shown by the following benchmark results on graphs randomly generated with the Barabási–Albert model (the times are in **milliseconds** and the ratios are over the BMSSP time):
 
-| Nodes count | Edges count | BMSSP time | Fibonacci Heap Dijkstra time (ratio) | Binary Heap Dijkstra time (ratio) | D-ary Heap Dijkstra time: BGL implementation (ratio) |
-|:------------|:------------|:-----------|:-------------------------------------|:----------------------------------|:-----------------------------------------------------|
-| 5k          | 15k         | 2.756      | 1.261 (2.186)                        | 0.708 (3.890)                     | 0.599 (4.598)                                        |
-| 10k         | 30k         | 5.231      | 3.023 (1.731)                        | 1.773 (2.950)                     | 1.518 (3.445)                                        |
-| 50k         | 150k        | 30.921     | 20.230 (1.529)                       | 10.821 (2.858)                    | 10.167 (3.041)                                       |
-| 100k        | 300k        | 62.873     | 46.907 (1.340)                       | 23.560 (2.669)                    | 24.263 (2.591)                                       |
-| 500k        | 1.5M        | 440.811    | 364.175 (1.210)                      | 215.802 (2.043)                   | 219.309 (2.010)                                      |
-| 1M          | 3M          | 1014.896   | 847.899 (1.197)                      | 454.837 (2.231)                   | 477.213 (2.127)                                      |
-| 5M          | 15M         | 8249.652   | 5415.365 (1.523)                     | 3060.319 (2.696)                  | 2797.544 (2.949)                                     |
+| Nodes count | Edges count | BMSSP time | Fibonacci Heap Dijkstra time (ratio) | D-ary Heap Dijkstra time: BGL implementation (ratio) | Binary Heap Dijkstra time (ratio) |
+|:------------|:------------|:-----------|:-------------------------------------|:-----------------------------------------------------|:----------------------------------|
+| 5k          | 10k         | 1.170      | 0.566 (2.067)                        | 0.212 (5.518)                                        | 0.125 (9.355)                     |
+| 10k         | 20k         | 1.950      | 1.251 (1.559)                        | 0.522 (3.739)                                        | 0.322 (6.062)                     |
+| 50k         | 100k        | 9.324      | 7.886 (1.182)                        | 3.782 (2.465)                                        | 2.345 (3.976)                     |
+| 100k        | 200k        | 19.180     | 18.929 (1.013)                       | 9.189 (2.087)                                        | 5.352 (3.584)                     |
+| 500k        | 1M          | 169.767    | 195.544 (0.868)                      | 113.587 (1.495)                                      | 80.295 (2.114)                    |
+| 1M          | 2M          | 471.732    | 450.538 (1.047)                      | 276.522 (1.706)                                      | 191.068 (2.469)                   |
+| 5M          | 10M         | 4070.192   | 3073.702 (1.324)                     | 2709.849 (1.502)                                     | 1595.685 (2.551)                  |
+| 10M         | 20M         | 7608.208   | 7793.388 (0.976)                     | 7324.826 (1.039)                                     | 3879.649 (1.961)                  |
 
 ## Usage
 

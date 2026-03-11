@@ -3,7 +3,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 
-#define INF 10000000
+#define INF 10000000 // DBL_MAX
 using Dist_T = double;
 using Node_id_T = int;
 using VertexProp = boost::property<boost::vertex_name_t, Node_id_T>;
