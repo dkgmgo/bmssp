@@ -12,20 +12,32 @@ using namespace std;
 
 constexpr int RANDOM_SEED = 1234;
 
-const vector<vector<int64_t>> ARGS = {
-    //{5000, 15000, 10},
-    {10000, 30000, 10},
-    {50000, 150000, 10},
-    {100000, 300000, 10},
-    //{500000, 1500000, 10},
-    //{1000000, 3000000, 10},
-    //{5000000, 15000000, 10},
-    //{10000000, 30000000, 10}
+const vector<vector<int64_t>> random_ARGS = {
+    {5000, 10},
+    {10000, 10},
+    {50000, 10},
+    {100000, 10},
+    {500000, 10},
+    {1000000, 10},
+    {5000000, 10},
+    {10000000, 10}
+};
+
+const vector<vector<int64_t>> grid_ARGS = {
+    {500, 10},
+    {1000, 10},
+    {500, 100},
+    {1000, 100},
+    {5000, 100},
+    {10000, 100},
+    {5000, 1000},
+    {10000, 1000}
 };
 
 string data_path = string(PROJECT_ROOT) + "/data";
 const vector<string> FILES = {
     data_path + "/1199167200.1199170800.graphml",
+    data_path + "/1702188000.1702191600.graphml"
 };
 
 struct GraphDataset {
@@ -74,16 +86,15 @@ class RandomGraphFixture : public BenchFixture {
 public:
     void SetUp(const benchmark::State& state) override {
         int64_t N = state.range(0);
-        int64_t M = state.range(1);
-        int max_weight = state.range(2);
+        int max_weight = state.range(1);
 
-        string key = "random_" + to_string(N) + "_" + to_string(M) + "_" + to_string(max_weight);
+        string key = "random_" + to_string(N) + "_" + to_string(max_weight);
         auto& dataset = GraphRepository::get(key, [&]() {
             GraphDataset d;
-            string specs = "random nodes_count=" + to_string(N) + " edges_count=" + to_string(M) + " max_weight=" + to_string(max_weight) + " seed=" + to_string(RANDOM_SEED);
+            string specs = "random nodes_count=" + to_string(N) + " max_weight=" + to_string(max_weight) + " seed=" + to_string(RANDOM_SEED);
             d.graph = go_get_that_graph(specs);
             d.nodes_count = N;
-            d.edges_count = M;
+            d.edges_count = boost::num_edges(d.graph);
             d.src = get_a_source(d.graph);
             d.ref_dist = boost_dijkstra(d.graph, d.src, d.nodes_count).first;
             return d;
@@ -101,15 +112,40 @@ class RandomUnweightedGraphFixture : public BenchFixture {
 public:
     void SetUp(const benchmark::State& state) override {
         int64_t N = state.range(0);
-        int64_t M = state.range(1);
 
-        string key = "random_unweighted_" + to_string(N) + "_" + to_string(M);
+        string key = "random_unweighted_" + to_string(N);
         auto& dataset = GraphRepository::get(key, [&]() {
             GraphDataset d;
-            string specs = "random unweighted nodes_count=" + to_string(N) + " edges_count=" + to_string(M) + " seed=" + to_string(RANDOM_SEED);
+            string specs = "random unweighted nodes_count=" + to_string(N) + " seed=" + to_string(RANDOM_SEED);
             d.graph = go_get_that_graph(specs);
             d.nodes_count = N;
-            d.edges_count = M;
+            d.edges_count = boost::num_edges(d.graph);
+            d.src = get_a_source(d.graph);
+            d.ref_dist = boost_dijkstra(d.graph, d.src, d.nodes_count).first;
+            return d;
+        });
+
+        graph = &dataset.graph;
+        src = dataset.src;
+        nodes_count = dataset.nodes_count;
+        edges_count = dataset.edges_count;
+        ref_dist = &dataset.ref_dist;
+    }
+};
+
+class GridGraphFixture : public BenchFixture {
+public:
+    void SetUp(const benchmark::State& state) override {
+        int w = state.range(0);
+        int h = state.range(1);
+
+        string key = "grid_" + to_string(w) + "_" + to_string(h);
+        auto& dataset = GraphRepository::get(key, [&]() {
+            GraphDataset d;
+            string specs = "grid w=" + to_string(w) + " h=" + to_string(h);
+            d.graph = go_get_that_graph(specs);
+            d.nodes_count = boost::num_vertices(d.graph);
+            d.edges_count = boost::num_edges(d.graph);
             d.src = get_a_source(d.graph);
             d.ref_dist = boost_dijkstra(d.graph, d.src, d.nodes_count).first;
             return d;
@@ -215,6 +251,12 @@ using Fibo_RandomUnweighted = SSSPBench<RandomUnweightedGraphFixture, FiboDijkst
 using Boost_RandomUnweighted = SSSPBench<RandomUnweightedGraphFixture, BoostDijkstraAlgo>;
 using BMSSP_RandomUnweighted = SSSPBench<RandomUnweightedGraphFixture, BMSSPAlgo>;
 
+// Grid
+using StdPQ_Grid = SSSPBench<GridGraphFixture, StdPQDijkstraAlgo>;
+using Fibo_Grid = SSSPBench<GridGraphFixture, FiboDijkstraAlgo>;
+using Boost_Grid = SSSPBench<GridGraphFixture, BoostDijkstraAlgo>;
+using BMSSP_Grid = SSSPBench<GridGraphFixture, BMSSPAlgo>;
+
 // BGP graphs
 using StdPQ_BGP = SSSPBench<BGPGraphFixture, StdPQDijkstraAlgo>;
 using Fibo_BGP = SSSPBench<BGPGraphFixture, FiboDijkstraAlgo>;
@@ -227,7 +269,7 @@ BENCHMARK_DEFINE_F(Cls, Name)(benchmark::State& st) { \
     this->RunBenchmark(st); \
 }
 
-#define REGISTER_BENCH_WITH_ARGS(Fixture, Name) \
+#define REGISTER_BENCH_WITH_ARGS(Fixture, Name, ARGS) \
 BENCHMARK_REGISTER_F(Fixture, Name)->MinWarmUpTime(0.5)->Apply([](::benchmark::Benchmark* b) { \
 for (const auto& arg : ARGS){ \
     b->Args(arg); \
@@ -253,6 +295,12 @@ DEFINE_BENCHMARK(Fibo_RandomUnweighted, BOOSTFibonacciHeap)
 DEFINE_BENCHMARK(Boost_RandomUnweighted, BOOSTDijkstra)
 DEFINE_BENCHMARK(BMSSP_RandomUnweighted, BMSSP)
 
+// Grid
+DEFINE_BENCHMARK(StdPQ_Grid, STDPriorityQueue)
+DEFINE_BENCHMARK(Fibo_Grid, BOOSTFibonacciHeap)
+DEFINE_BENCHMARK(Boost_Grid, BOOSTDijkstra)
+DEFINE_BENCHMARK(BMSSP_Grid, BMSSP)
+
 // BGP graphs
 DEFINE_BENCHMARK(StdPQ_BGP, STDPriorityQueue)
 DEFINE_BENCHMARK(Fibo_BGP, BOOSTFibonacciHeap)
@@ -261,16 +309,22 @@ DEFINE_BENCHMARK(BMSSP_BGP, BMSSP)
 
 int main(int argc, char** argv) {
     // Random weighted
-    REGISTER_BENCH_WITH_ARGS(StdPQ_RandomGraph, STDPriorityQueue)->Complexity()->Unit(benchmark::kMillisecond);
-    REGISTER_BENCH_WITH_ARGS(Fibo_RandomGraph, BOOSTFibonacciHeap)->Complexity()->Unit(benchmark::kMillisecond);
-    REGISTER_BENCH_WITH_ARGS(Boost_RandomGraph, BOOSTDijkstra)->Complexity()->Unit(benchmark::kMillisecond);
-    REGISTER_BENCH_WITH_ARGS(BMSSP_RandomGraph, BMSSP)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(StdPQ_RandomGraph, STDPriorityQueue, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(Fibo_RandomGraph, BOOSTFibonacciHeap, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(Boost_RandomGraph, BOOSTDijkstra, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(BMSSP_RandomGraph, BMSSP, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
 
     // Random unweighted
-    REGISTER_BENCH_WITH_ARGS(StdPQ_RandomUnweighted, STDPriorityQueue)->Complexity()->Unit(benchmark::kMillisecond);
-    REGISTER_BENCH_WITH_ARGS(Fibo_RandomUnweighted, BOOSTFibonacciHeap)->Complexity()->Unit(benchmark::kMillisecond);
-    REGISTER_BENCH_WITH_ARGS(Boost_RandomUnweighted, BOOSTDijkstra)->Complexity()->Unit(benchmark::kMillisecond);
-    REGISTER_BENCH_WITH_ARGS(BMSSP_RandomUnweighted, BMSSP)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(StdPQ_RandomUnweighted, STDPriorityQueue, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(Fibo_RandomUnweighted, BOOSTFibonacciHeap, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(Boost_RandomUnweighted, BOOSTDijkstra, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(BMSSP_RandomUnweighted, BMSSP, random_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+
+    // Grid
+    REGISTER_BENCH_WITH_ARGS(StdPQ_Grid, STDPriorityQueue, grid_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(Fibo_Grid, BOOSTFibonacciHeap, grid_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(Boost_Grid, BOOSTDijkstra, grid_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
+    REGISTER_BENCH_WITH_ARGS(BMSSP_Grid, BMSSP, grid_ARGS)->Complexity()->Unit(benchmark::kMillisecond);
 
     // BGP graphs
     REGISTER_BENCH_WITH_RANGE(StdPQ_BGP, STDPriorityQueue, FILES.size())->Complexity()->Unit(benchmark::kMillisecond);
